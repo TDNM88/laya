@@ -57,15 +57,20 @@ export async function POST(req: Request) {
       // Tiếp tục xử lý mà không có tài liệu liên quan
     }
 
-    // Tạo context từ các tài liệu liên quan với thông tin nguồn chi tiết hơn
+    // Tạo context từ các tài liệu liên quan nhưng không hiển thị nguồn trong phần trả lời
     let context = ""
     if (relevantDocs.length > 0) {
-      context = "Thông tin từ cơ sở kiến thức (HÃY SỬ DỤNG THÔNG TIN NÀY ĐỂ TRẢ LỜI):\n\n" + 
-        relevantDocs.map((doc, index) => {
-          // Tính điểm tương đồng theo thang 100
-          const similarityScore = Math.round(doc.similarity * 100);
-          return `[TÀI LIỆU ${index + 1} - Nguồn: ${doc.source} - Độ liên quan: ${similarityScore}%]\n${doc.content}`;
-        }).join("\n\n")
+      // Lưu thông tin nguồn để sử dụng trong quá trình xử lý nhưng không hiển thị cho người dùng
+      const sourceInfo = relevantDocs.map((doc, index) => {
+        const similarityScore = Math.round(doc.similarity * 100);
+        return `Tài liệu ${index + 1}: ${doc.source} - Độ liên quan: ${similarityScore}%`;
+      }).join("\n");
+      
+      console.log("Source information (internal only):\n" + sourceInfo);
+      
+      // Chỉ sử dụng nội dung tài liệu trong context
+      context = "Thông tin từ cơ sở kiến thức (HÃY TRẢ LỜI CHÍNH XÁC DỰA TRÊN THÔNG TIN NÀY):\n\n" + 
+        relevantDocs.map((doc) => doc.content).join("\n\n")
     }
 
     // Tạo system prompt với context
@@ -74,10 +79,11 @@ export async function POST(req: Request) {
     ${context ? context : "Không tìm thấy thông tin liên quan trong cơ sở kiến thức."}
     
     HƯỚNG DẪN BẮT BUỘC:
-    1. Nếu có thông tin từ cơ sở kiến thức, BẮT BUỘC phải sử dụng chính xác thông tin đó để trả lời. KHÔNG ĐƯỢC tự ý thêm thông tin hoặc sáng tạo nội dung không có trong tài liệu.
-    2. Trích dẫn rõ ràng nguồn thông tin khi trả lời (ví dụ: "Theo tài liệu [tên tài liệu]...").
+    1. Bạn phải trả lời CHÍNH XÁC theo nội dung tài liệu được cung cấp. KHÔNG ĐƯỢC thêm hoặc bớt bất kỳ thông tin nào.
+    2. KHÔNG ĐƯỢC trích dẫn nguồn trong câu trả lời. Hãy trả lời như thể thông tin đó là của bạn.
     3. Nếu không có thông tin liên quan trong cơ sở kiến thức, hãy nói rằng bạn không có thông tin về vấn đề đó và đề nghị người dùng liên hệ với Mentor Laya để được hỗ trợ.
     4. KHÔNG ĐƯỢC tạo ra các thông tin sai lệch hoặc không có trong cơ sở kiến thức.
+    5. Sử dụng chính xác các từ ngữ và cụm từ trong tài liệu, không tự ý thay đổi cách diễn đạt.
     
     Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp. Sử dụng emoji 🌿 khi nói về sản phẩm Laya và ✨ khi nói về hệ thống Mentor.`
 
