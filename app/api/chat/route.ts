@@ -4,7 +4,7 @@ import { createClient, testOpenRouterConnection, MODEL_CONFIG } from "@/lib/open
 import { searchDocuments } from "@/lib/knowledge"
 
 export const runtime = "nodejs"
-export const maxDuration = 120 // Tăng lên 120 giây để đảm bảo có đủ thời gian xử lý
+export const maxDuration = 60 // Giới hạn tối đa cho gói Hobby của Vercel
 
 export async function POST(req: Request) {
   try {
