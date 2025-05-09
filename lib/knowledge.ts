@@ -96,25 +96,40 @@ export async function loadKnowledgeBase() {
 
 // Split text into chunks of roughly equal size
 function splitIntoChunks(text: string, maxChunkSize: number): string[] {
-  const chunks: string[] = []
-  const sentences = text.split(/(?<=[.!?])\s+/)
-
-  let currentChunk = ""
+  const chunks: string[] = [];
+  
+  // Kiểm tra nếu văn bản có dạng Q&A với các câu hỏi và câu trả lời
+  if (text.includes('→ Trả lời:') || text.includes('?')) {
+    // Tách văn bản theo các câu hỏi và câu trả lời
+    const qaPattern = /(\d+\.?\s*[^\n]+\?[\s\n]*→ Trả lời:[^\n]*(?:\n[^\d\n][^\n]*)*)/g;
+    const matches = text.match(qaPattern);
+    
+    if (matches && matches.length > 0) {
+      // Nếu tìm thấy các cặp Q&A, sử dụng chúng làm các chunk
+      console.log(`Found ${matches.length} Q&A pairs in text`);
+      return matches;
+    }
+  }
+  
+  // Nếu không phải dạng Q&A, sử dụng phương pháp tách câu thông thường
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  let currentChunk = "";
 
   for (const sentence of sentences) {
+    // Nếu thêm câu này sẽ vượt quá kích thước tối đa và chunk hiện tại không trống
     if (currentChunk.length + sentence.length > maxChunkSize && currentChunk.length > 0) {
-      chunks.push(currentChunk)
-      currentChunk = ""
+      chunks.push(currentChunk);
+      currentChunk = "";
     }
 
-    currentChunk += (currentChunk ? " " : "") + sentence
+    currentChunk += (currentChunk ? " " : "") + sentence;
   }
 
   if (currentChunk) {
-    chunks.push(currentChunk)
+    chunks.push(currentChunk);
   }
 
-  return chunks
+  return chunks;
 }
 
 // Calculate cosine similarity between two vectors
@@ -171,11 +186,31 @@ export async function searchDocuments(query: string): Promise<Array<{content: st
   }
 
   try {
-    // Create an embedding for the query
+    // Chuẩn hóa câu hỏi để tăng khả năng tìm kiếm
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // Tìm kiếm chính xác trước (exact match)
+    const exactMatches = knowledgeCache.chunks.filter(chunk => {
+      const normalizedText = chunk.text.toLowerCase();
+      return normalizedText.includes(normalizedQuery) || 
+             normalizedQuery.includes(normalizedText.substring(0, Math.min(normalizedText.length, 30)));
+    });
+    
+    if (exactMatches.length > 0) {
+      console.log(`Found ${exactMatches.length} exact matches for query: "${query}"`);
+      return exactMatches.map(chunk => ({
+        content: chunk.text,
+        source: chunk.source,
+        similarity: 1.0 // Đặt độ tương đồng cao nhất cho kết quả chính xác
+      }));
+    }
+    
+    // Nếu không có kết quả chính xác, sử dụng embedding
+    console.log("No exact matches found, using embeddings search");
     const queryEmbedding = await createEmbedding(query)
 
-    // Tăng ngưỡng độ tương đồng tối thiểu
-    const MIN_SIMILARITY_THRESHOLD = 0.5;
+    // Giảm ngưỡng độ tương đồng tối thiểu để tăng khả năng tìm kiếm
+    const MIN_SIMILARITY_THRESHOLD = 0.3;
     
     // Find the most relevant chunks
     const relevantChunks = knowledgeCache.chunks
@@ -187,13 +222,13 @@ export async function searchDocuments(query: string): Promise<Array<{content: st
       // Lọc các kết quả có độ tương đồng thấp
       .filter(chunk => chunk.similarity >= MIN_SIMILARITY_THRESHOLD)
       .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 5) // Tăng lên 5 kết quả để có nhiều thông tin hơn
+      .slice(0, 7) // Tăng lên 7 kết quả để có nhiều thông tin hơn
     
     console.log(`Found ${relevantChunks.length} relevant chunks for query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
     
-    // Nếu không tìm thấy kết quả nào vượt ngưỡng, thử tìm kiếm lại với ngưỡng thấp hơn
+    // Nếu vẫn không tìm thấy kết quả, trả về top 5 kết quả gần nhất bất kể độ tương đồng
     if (relevantChunks.length === 0) {
-      console.log("No chunks above threshold, returning top 3 results regardless of similarity");
+      console.log("No chunks above threshold, returning top 5 results regardless of similarity");
       return knowledgeCache.chunks
         .map((chunk) => ({
           content: chunk.text,
@@ -201,7 +236,7 @@ export async function searchDocuments(query: string): Promise<Array<{content: st
           similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
         }))
         .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, 3);
+        .slice(0, 5);
     }
     
     return relevantChunks
