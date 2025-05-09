@@ -174,6 +174,9 @@ export async function searchDocuments(query: string): Promise<Array<{content: st
     // Create an embedding for the query
     const queryEmbedding = await createEmbedding(query)
 
+    // Tăng ngưỡng độ tương đồng tối thiểu
+    const MIN_SIMILARITY_THRESHOLD = 0.5;
+    
     // Find the most relevant chunks
     const relevantChunks = knowledgeCache.chunks
       .map((chunk) => ({
@@ -181,10 +184,26 @@ export async function searchDocuments(query: string): Promise<Array<{content: st
         source: chunk.source,
         similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
       }))
+      // Lọc các kết quả có độ tương đồng thấp
+      .filter(chunk => chunk.similarity >= MIN_SIMILARITY_THRESHOLD)
       .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 3) // Get top 3 most relevant chunks
+      .slice(0, 5) // Tăng lên 5 kết quả để có nhiều thông tin hơn
     
-    console.log(`Found ${relevantChunks.length} relevant chunks for query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`)
+    console.log(`Found ${relevantChunks.length} relevant chunks for query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
+    
+    // Nếu không tìm thấy kết quả nào vượt ngưỡng, thử tìm kiếm lại với ngưỡng thấp hơn
+    if (relevantChunks.length === 0) {
+      console.log("No chunks above threshold, returning top 3 results regardless of similarity");
+      return knowledgeCache.chunks
+        .map((chunk) => ({
+          content: chunk.text,
+          source: chunk.source,
+          similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
+        }))
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 3);
+    }
+    
     return relevantChunks
   } catch (error) {
     console.error("Error searching knowledge base:", error)
