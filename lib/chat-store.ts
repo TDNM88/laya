@@ -39,7 +39,7 @@ const initialState: ChatState = {
 
 export const useChatStore = create<
   ChatState & {
-    sendMessage: (content: string, attachments?: File[]) => Promise<void>
+    sendMessage: (content: string, attachments?: File[] | any[]) => Promise<void>
     editMessage: (messageId: string, newContent: string) => void
     deleteMessage: (messageId: string) => void
     markAsRead: (messageId: string) => void
@@ -118,11 +118,8 @@ export const useChatStore = create<
           // Sử dụng đường dẫn tuyệt đối để tránh vấn đề với đường dẫn tương đối
           const apiUrl = new URL("/api/chat", window.location.origin).toString()
 
-          // Thêm timeout cho fetch để tránh chờ quá lâu
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 giây timeout
-
-          // Gửi yêu cầu với cơ chế thử lại
+          // Gửi yêu cầu với cơ chế thử lại nhưng không sử dụng AbortController
+          // để tránh lỗi AbortError: signal is aborted without reason
           const response = await fetchWithRetry(
             apiUrl,
             {
@@ -131,12 +128,12 @@ export const useChatStore = create<
                 "Content-Type": "application/json",
               },
               body: requestBody,
-              signal: controller.signal,
+              // Không sử dụng signal để tránh lỗi AbortError
             },
-            3,
+            3, // Số lần thử lại
+            1000, // Thời gian chờ ban đầu (ms)
+            10000 // Thời gian chờ tối đa (ms)
           )
-
-          clearTimeout(timeoutId)
 
           if (!response.ok) {
             let errorMessage = `Lỗi máy chủ: ${response.status} ${response.statusText}`

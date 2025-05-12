@@ -2,6 +2,8 @@
 // vì có thể có sự không tương thích giữa phiên bản
 import { createClient, testGroqConnection, MODEL_CONFIG } from "@/lib/groq-client"
 import { searchDocuments } from "@/lib/knowledge"
+import { detectImageGenerationRequest, translatePromptToEnglish } from "@/lib/image-detection"
+import { v4 as uuidv4 } from "uuid"
 
 export const runtime = "nodejs"
 export const maxDuration = 60 // Giới hạn tối đa cho gói Hobby của Vercel
@@ -46,6 +48,54 @@ export async function POST(req: Request) {
     // Lấy tin nhắn cuối cùng
     const lastMessage = messages[messages.length - 1].content
     console.log("Last message:", lastMessage.substring(0, 100) + (lastMessage.length > 100 ? "..." : ""))
+    
+    // Phát hiện yêu cầu tạo ảnh
+    const imageDetection = detectImageGenerationRequest(lastMessage)
+    let imageGenerationResponse = null
+    let imageGenerationNotification = null
+    
+    // Nếu là yêu cầu tạo ảnh và có prompt hợp lệ
+    if (imageDetection.isImageRequest && imageDetection.prompt) {
+      console.log("Detected image generation request with prompt:", imageDetection.prompt)
+      
+      // Tạo thông báo trước khi tiến hành tạo ảnh
+      imageGenerationNotification = `Tôi đang tiến hành tạo ảnh từ mô tả của bạn: "${imageDetection.prompt}". Vui lòng đợi trong giây lát...`
+      
+      try {
+        // Dịch prompt sang tiếng Anh trước khi gọi API tạo ảnh
+        const translatedPrompt = await translatePromptToEnglish(imageDetection.prompt);
+        console.log(`Translated prompt: "${imageDetection.prompt}" -> "${translatedPrompt}"`);
+        
+        // Gọi API tạo ảnh với prompt đã dịch
+        const imageResponse = await fetch(new URL("/api/image", `${req.headers.get("origin") || "http://localhost:3000"}`).toString(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            prompt: translatedPrompt,
+            originalPrompt: imageDetection.prompt 
+          }),
+        })
+        
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json()
+          if (imageData.success && imageData.imageUrl) {
+            console.log("Successfully generated image:", imageData.imageUrl)
+            imageGenerationResponse = {
+              success: true,
+              imageUrl: imageData.imageUrl,
+              prompt: imageDetection.prompt
+            }
+          }
+        } else {
+          const errorData = await imageResponse.json()
+          console.error("Error generating image:", errorData.error)
+        }
+      } catch (error) {
+        console.error("Exception when generating image:", error)
+      }
+    }
 
     // Tìm kiếm thông tin liên quan từ cơ sở kiến thức
     let relevantDocs: Array<{content: string; source: string; similarity: number}> = []
@@ -129,6 +179,15 @@ export async function POST(req: Request) {
       console.log("Stream created successfully")
 
       // Trả về streaming response sử dụng Response API tiêu chuẩn
+      // Chuẩn bị dữ liệu ảnh đã tạo nếu có
+      const imageAttachment = imageGenerationResponse ? {
+        id: uuidv4(),
+        type: "image",
+        url: imageGenerationResponse.imageUrl,
+        name: `AI Image: ${imageGenerationResponse.prompt.substring(0, 30)}${imageGenerationResponse.prompt.length > 30 ? "..." : ""}`,
+        prompt: imageGenerationResponse.prompt
+      } : null;
+      
       // Chuyển đổi response thành ReadableStream
       // Vì OpenAI SDK trả về Stream<ChatCompletionChunk> mà không phải ReadableStream trực tiếp
       return new Response(
@@ -137,6 +196,29 @@ export async function POST(req: Request) {
             const encoder = new TextEncoder();
             
             try {
+              // Gửi thông báo trước khi tạo ảnh nếu có
+              if (imageGenerationNotification) {
+                const notificationChunk = `data: ${JSON.stringify({ 
+                  text: imageGenerationNotification
+                })}
+
+`;
+                controller.enqueue(encoder.encode(notificationChunk));
+              }
+              
+              // Nếu có ảnh đã tạo, gửi thông tin về ảnh
+              if (imageAttachment) {
+                const imageChunk = `data: ${JSON.stringify({ 
+                  imageAttachment,
+                  text: `Đã tạo ảnh từ mô tả: "${imageGenerationResponse?.prompt}"
+
+` 
+                })}
+
+`;
+                controller.enqueue(encoder.encode(imageChunk));
+              }
+              
               // Xử lý từng chunk từ stream của OpenAI
               for await (const chunk of response) {
                 // Lấy nội dung văn bản từ chunk

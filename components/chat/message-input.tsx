@@ -5,11 +5,12 @@ import type React from "react"
 import { useState, useRef, type ChangeEvent, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Send, Paperclip, X, ImageIcon, FileText, Video, AlertCircle, RefreshCw, Wifi, WifiOff } from "lucide-react"
+import { Send, Paperclip, X, ImageIcon, FileText, Video, AlertCircle, RefreshCw, Wifi, WifiOff, Sparkles } from "lucide-react"
 import { useChatStore } from "@/lib/chat-store"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ImageGenerator } from "./image-generator"
 
 export function MessageInput() {
   const [message, setMessage] = useState("")
@@ -250,10 +251,10 @@ export function MessageInput() {
             }
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="pr-12 py-6 text-base rounded-full pl-5 shadow-sm border-gray-300 dark:border-gray-700 focus-visible:ring-2 focus-visible:ring-primary transition-all"
+            className="pr-24 py-6 text-base rounded-full pl-5 shadow-sm border-gray-300 dark:border-gray-700 focus-visible:ring-2 focus-visible:ring-primary transition-all"
             disabled={isTyping || networkStatus === "offline"}
           />
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -268,7 +269,23 @@ export function MessageInput() {
                     <Paperclip className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="top">Đính kèm tệp</TooltipContent>
+                <TooltipContent side="top">
+                  <p>Đính kèm tệp</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            {/* Thêm nút tạo ảnh AI */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <ImageGenerator />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Tạo ảnh bằng AI</p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

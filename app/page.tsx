@@ -48,13 +48,22 @@ export default function ChatPage() {
       try {
         // Gọi API để kiểm tra kết nối
         const response = await fetch('/api/health')
-        // Lưu ý: isConnected được quản lý trong store và chúng ta không có hàm setIsConnected
-        // Nên chúng ta chỉ cập nhật trạng thái mạng trong component này
-        if (!response.ok) {
-          console.error('API health check failed')
+        
+        if (response.ok) {
+          const data = await response.json()
+          // Hiển thị trạng thái kết nối thành công
+          setIsOnline(true)
+          setShowStatus(false) // Ẩn thông báo lỗi nếu đã hiển thị trước đó
+          console.log('API health check successful:', data)
+        } else {
+          console.error('API health check failed: Status', response.status)
+          setIsOnline(false)
+          setShowStatus(true) // Hiển thị thông báo lỗi
         }
       } catch (error) {
         console.error('API health check error:', error)
+        setIsOnline(false)
+        setShowStatus(true) // Hiển thị thông báo lỗi
       }
     }
 

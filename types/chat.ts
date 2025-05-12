@@ -20,11 +20,12 @@ export interface Message {
 
 export interface Attachment {
   id: string
-  type: "image" | "video" | "file"
+  type: "image" | "video" | "file" | "generated_image"
   url: string
   name: string
   size?: number
   thumbnailUrl?: string
+  prompt?: string // Thêm trường prompt cho ảnh được tạo
 }
 
 export interface Reaction {
