@@ -1,6 +1,6 @@
 // Sử dụng Response API tiêu chuẩn của Next.js thay vì thư viện ai
 // vì có thể có sự không tương thích giữa phiên bản
-import { createClient, testOpenRouterConnection, MODEL_CONFIG } from "@/lib/openrouter-client"
+import { createClient, testGroqConnection, MODEL_CONFIG } from "@/lib/groq-client"
 import { searchDocuments } from "@/lib/knowledge"
 
 export const runtime = "nodejs"
@@ -11,9 +11,9 @@ export async function POST(req: Request) {
     console.log("API route handler started")
 
     // Kiểm tra API key
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
-      console.error("OPENROUTER_API_KEY không được cấu hình")
+      console.error("GROQ_API_KEY không được cấu hình")
       return new Response(
         JSON.stringify({ error: "API key không được cấu hình. Vui lòng kiểm tra biến môi trường." }),
         { status: 500, headers: { "Content-Type": "application/json" } },
@@ -87,19 +87,19 @@ export async function POST(req: Request) {
     
     Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp. Sử dụng emoji 🌿 khi nói về sản phẩm Laya và ✨ khi nói về hệ thống Mentor.`
 
-    // Kiểm tra kết nối với OpenRouter trước khi gửi yêu cầu chính
+    // Kiểm tra kết nối với Groq trước khi gửi yêu cầu chính
     let modelToUse = MODEL_CONFIG.modelId;
     
     try {
-      console.log("Testing OpenRouter connection")
-      const connectionTest = await testOpenRouterConnection()
+      console.log("Testing Groq connection")
+      const connectionTest = await testGroqConnection()
 
       if (!connectionTest.success) {
-        console.warn("OpenRouter connection test failed:", connectionTest.message)
+        console.warn("Groq connection test failed:", connectionTest.message)
         // Không trả về lỗi ngay lập tức, thay vào đó sẽ thử tiếp tục với mô hình mặc định
         // hoặc mô hình dự phòng trong hàm createChatCompletion
       } else {
-        console.log("OpenRouter connection test successful")
+        console.log("Groq connection test successful")
         // Sử dụng mô hình đã kiểm tra thành công
         if (connectionTest.modelTested) {
           modelToUse = connectionTest.modelTested;
@@ -107,30 +107,24 @@ export async function POST(req: Request) {
         }
       }
     } catch (error) {
-      console.error("Error testing OpenRouter connection:", error)
+      console.error("Error testing Groq connection:", error)
       // Tiếp tục xử lý mặc dù kiểm tra kết nối thất bại
     }
 
-    console.log("Creating OpenRouter client")
-    const openai = createClient()
+    console.log("Creating Groq client")
+    const groq = createClient()
 
     // Tạo stream response
     try {
       console.log(`Creating chat completion with model: ${modelToUse}`)
       
-      // Thiết lập timeout cho yêu cầu
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), MODEL_CONFIG.timeout);
-      
-      const response = await openai.chat.completions.create({
+      const response = await groq.chat.completions.create({
         model: modelToUse,
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         stream: true,
         temperature: MODEL_CONFIG.temperature,
         max_tokens: MODEL_CONFIG.maxTokens,
-      }, { signal: controller.signal })
-      
-      clearTimeout(timeoutId);
+      })
 
       console.log("Stream created successfully")
 
@@ -214,7 +208,7 @@ export async function POST(req: Request) {
         const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), 30000); // 30s timeout cho phương án dự phòng
 
         // Tạo phản hồi không streaming
-        const fallbackResponse = await openai.chat.completions.create({
+        const fallbackResponse = await groq.chat.completions.create({
           model: fallbackModelToUse,
           messages: [{ role: "system", content: systemPrompt }, ...messages],
           stream: false,
@@ -264,7 +258,7 @@ export async function POST(req: Request) {
 // Thêm endpoint để kiểm tra trạng thái API
 export async function GET() {
   try {
-    const connectionTest = await testOpenRouterConnection()
+    const connectionTest = await testGroqConnection()
 
     // Kiểm tra các tệp kiến thức
     let knowledgeStatus = "unknown";
