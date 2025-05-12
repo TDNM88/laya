@@ -190,8 +190,40 @@ export const useChatStore = create<
                       // Phân tích dữ liệu JSON
                       const parsedData = JSON.parse(data)
                       
+                      // Kiểm tra nếu có thông tin ảnh đính kèm
+                      if (parsedData.imageAttachment) {
+                        console.log('Received image attachment:', parsedData.imageAttachment)
+                        
+                        // Cập nhật tin nhắn hiện tại với ảnh đính kèm
+                        set((state) => {
+                          const session = state.sessions.find((s) => s.id === activeSessionId)
+                          if (!session) return state
+                          
+                          // Tạo tin nhắn mới với ảnh đính kèm
+                          return {
+                            sessions: state.sessions.map((s) =>
+                              s.id === activeSessionId
+                                ? {
+                                    ...s,
+                                    messages: [
+                                      ...s.messages,
+                                      {
+                                        id: uuidv4(),
+                                        content: parsedData.text || '',
+                                        role: 'assistant',
+                                        timestamp: new Date(),
+                                        isRead: false,
+                                        attachments: [parsedData.imageAttachment]
+                                      },
+                                    ],
+                                  }
+                                : s
+                            ),
+                          }
+                        })
+                      }
                       // Lấy phần text từ dữ liệu
-                      if (parsedData.text) {
+                      else if (parsedData.text) {
                         assistantContent += parsedData.text
                       }
                     } catch (e) {

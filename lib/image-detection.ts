@@ -71,12 +71,68 @@ export function detectImageGenerationRequest(text: string): { isImageRequest: bo
   return { isImageRequest: false, prompt: null };
 }
 
+import { createClient } from "@/lib/groq-client";
+
 /**
- * Dịch prompt từ tiếng Việt sang tiếng Anh
+ * Dịch prompt từ tiếng Việt sang tiếng Anh sử dụng LLM (Groq)
  * @param prompt Prompt tiếng Việt cần dịch
  * @returns Prompt đã dịch sang tiếng Anh
  */
 export async function translatePromptToEnglish(prompt: string): Promise<string> {
+  try {
+    console.log("Translating prompt using LLM:", prompt);
+    
+    // Sử dụng Groq LLM để dịch
+    const groq = createClient();
+    
+    // Tạo system prompt hướng dẫn dịch thuật
+    const systemPrompt = `You are a professional translator specializing in Vietnamese to English translation. 
+    Your task is to translate the given Vietnamese text into English accurately, maintaining the meaning and context. 
+    Focus specifically on translating text that will be used as a prompt for image generation. 
+    Add appropriate descriptive terms to enhance the quality of the generated image. 
+    Do not include any explanations or notes - only provide the translated text.`;
+    
+    // Gọi API Groq để dịch
+    const response = await groq.chat.completions.create({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct", // Sử dụng mô hình có khả năng dịch tốt
+      messages: [
+        { 
+          role: "system", 
+          content: systemPrompt 
+        },
+        { 
+          role: "user", 
+          content: `Translate this Vietnamese text to English for image generation: "${prompt}". 
+          Make sure to add appropriate descriptive terms to enhance the quality of the generated image.` 
+        }
+      ],
+      temperature: 0.3, // Nhiệt độ thấp để đảm bảo tính chính xác
+      max_tokens: 200,
+    });
+    
+    // Lấy kết quả dịch
+    const translatedText = response.choices[0]?.message?.content?.trim() || "";
+    
+    // Kiểm tra kết quả dịch
+    if (translatedText) {
+      console.log("LLM translation successful:", translatedText);
+      
+      // Thêm các từ khóa chất lượng nếu chưa có
+      const qualityKeywords = "high quality, detailed, professional";
+      const hasQualityKeywords = qualityKeywords.split(", ").some(keyword => 
+        translatedText.toLowerCase().includes(keyword.toLowerCase())
+      );
+      
+      // Thêm các từ khóa chất lượng nếu chưa có
+      return hasQualityKeywords ? translatedText : `${translatedText}, ${qualityKeywords}`;
+    }
+  } catch (error) {
+    console.error("Error using LLM for translation:", error);
+  }
+  
+  // Nếu có lỗi hoặc không có kết quả, sử dụng phương pháp dự phòng
+  console.log("Falling back to basic translation method");
+  
   // Bảng dịch các từ và cụm từ thông dụng trong tiếng Việt
   const commonTranslations: Record<string, string> = {
     // Các từ mô tả cơ bản
@@ -125,79 +181,7 @@ export async function translatePromptToEnglish(prompt: string): Promise<string> 
     "bấm huyệt": "acupressure",
     "thiền": "meditation",
     "yoga": "yoga",
-    
-    // Các từ về thiên nhiên
-    "thiên nhiên": "nature",
-    "núi": "mountain",
-    "biển": "sea",
-    "sông": "river",
-    "hồ": "lake",
-    "rừng": "forest",
-    "cây": "tree",
-    "hoa": "flower",
-    "cỏ": "grass",
-    "mây": "cloud",
-    "bầu trời": "sky",
-    "mặt trời": "sun",
-    "mặt trăng": "moon",
-    "sao": "star",
-    
-    // Các từ về con người
-    "người": "person",
-    "phụ nữ": "woman",
-    "nam giới": "man",
-    "trẻ em": "children",
-    "gia đình": "family",
-    "người già": "elderly",
-    "bác sĩ": "doctor",
-    "thầy thuốc": "healer",
-    "người chữa bệnh": "healer",
-    
-    // Các từ về không gian
-    "phòng": "room",
-    "nhà": "house",
-    "văn phòng": "office",
-    "phòng khám": "clinic",
-    "bệnh viện": "hospital",
-    "vườn": "garden",
-    "cửa hàng": "store",
-    "trung tâm": "center",
-    
-    // Các từ về cảm xúc
-    "bình yên": "peaceful",
-    "thanh thản": "serene",
-    "thoải mái": "comfortable",
-    "thư giãn": "relaxed",
-    "hạnh phúc": "happy",
-    "vui vẻ": "joyful",
-    "yên tĩnh": "quiet",
-    "hài hòa": "harmonious",
-    "cân bằng": "balanced",
   };
-  
-  try {
-    // Thử dùng API dịch nếu có kết nối internet
-    const response = await fetch("https://api.mymemory.translated.net/get", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      // Sử dụng API dịch miễn phí MyMemory
-      // Giới hạn 5000 từ mỗi ngày
-      // Không cần API key cho các yêu cầu cơ bản
-      cache: "no-cache",
-    });
-    
-    if (response.ok) {
-      // Nếu API dịch hoạt động, sử dụng nó
-      const data = await response.json();
-      if (data.responseStatus === 200 && data.responseData?.translatedText) {
-        return data.responseData.translatedText;
-      }
-    }
-  } catch (error) {
-    console.log("Translation API failed, using fallback method");
-  }
   
   // Phương pháp dự phòng: dịch thủ công sử dụng bảng dịch
   let translatedPrompt = prompt;

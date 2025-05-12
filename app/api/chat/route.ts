@@ -53,6 +53,8 @@ export async function POST(req: Request) {
     const imageDetection = detectImageGenerationRequest(lastMessage)
     let imageGenerationResponse = null
     let imageGenerationNotification = null
+    let translatedPrompt = null
+    let shouldGenerateImage = false
     
     // Nếu là yêu cầu tạo ảnh và có prompt hợp lệ
     if (imageDetection.isImageRequest && imageDetection.prompt) {
@@ -61,50 +63,30 @@ export async function POST(req: Request) {
       // Tạo thông báo trước khi tiến hành tạo ảnh
       imageGenerationNotification = `Tôi đang tiến hành tạo ảnh từ mô tả của bạn: "${imageDetection.prompt}". Vui lòng đợi trong giây lát...`
       
+      // Chỉ chuẩn bị dịch prompt nhưng chưa gọi API tạo ảnh
       try {
-        // Dịch prompt sang tiếng Anh trước khi gọi API tạo ảnh
-        const translatedPrompt = await translatePromptToEnglish(imageDetection.prompt);
+        // Dịch prompt sang tiếng Anh để chuẩn bị cho việc tạo ảnh sau
+        translatedPrompt = await translatePromptToEnglish(imageDetection.prompt);
         console.log(`Translated prompt: "${imageDetection.prompt}" -> "${translatedPrompt}"`);
-        
-        // Gọi API tạo ảnh với prompt đã dịch
-        const imageResponse = await fetch(new URL("/api/image", `${req.headers.get("origin") || "http://localhost:3000"}`).toString(), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ 
-            prompt: translatedPrompt,
-            originalPrompt: imageDetection.prompt 
-          }),
-        })
-        
-        if (imageResponse.ok) {
-          const imageData = await imageResponse.json()
-          if (imageData.success && imageData.imageUrl) {
-            console.log("Successfully generated image:", imageData.imageUrl)
-            imageGenerationResponse = {
-              success: true,
-              imageUrl: imageData.imageUrl,
-              prompt: imageDetection.prompt
-            }
-          }
-        } else {
-          const errorData = await imageResponse.json()
-          console.error("Error generating image:", errorData.error)
-        }
+        shouldGenerateImage = true;
       } catch (error) {
-        console.error("Exception when generating image:", error)
+        console.error("Error translating prompt:", error);
+        // Nếu có lỗi khi dịch, sử dụng prompt gốc
+        translatedPrompt = imageDetection.prompt;
+        shouldGenerateImage = true;
       }
     }
 
-    // Tìm kiếm thông tin liên quan từ cơ sở kiến thức
+    // Tìm kiếm thông tin liên quan từ cơ sở kiến thức nếu không phải là yêu cầu tạo ảnh
     let relevantDocs: Array<{content: string; source: string; similarity: number}> = []
-    try {
-      relevantDocs = await searchDocuments(lastMessage)
-      console.log(`Found ${relevantDocs.length} relevant documents`)
-    } catch (error) {
-      console.error("Error searching documents:", error)
-      // Tiếp tục xử lý mà không có tài liệu liên quan
+    if (!imageDetection.isImageRequest) {
+      try {
+        relevantDocs = await searchDocuments(lastMessage)
+        console.log(`Found ${relevantDocs.length} relevant documents`)
+      } catch (error) {
+        console.error("Error searching documents:", error)
+        // Tiếp tục xử lý mà không có tài liệu liên quan
+      }
     }
 
     // Tạo context từ các tài liệu liên quan nhưng không hiển thị nguồn trong phần trả lời
@@ -179,14 +161,8 @@ export async function POST(req: Request) {
       console.log("Stream created successfully")
 
       // Trả về streaming response sử dụng Response API tiêu chuẩn
-      // Chuẩn bị dữ liệu ảnh đã tạo nếu có
-      const imageAttachment = imageGenerationResponse ? {
-        id: uuidv4(),
-        type: "image",
-        url: imageGenerationResponse.imageUrl,
-        name: `AI Image: ${imageGenerationResponse.prompt.substring(0, 30)}${imageGenerationResponse.prompt.length > 30 ? "..." : ""}`,
-        prompt: imageGenerationResponse.prompt
-      } : null;
+      // Chúng ta sẽ không sử dụng imageAttachment ở đây nữa vì ảnh sẽ được tạo sau khi đã gửi thông báo
+      const imageAttachment = null;
       
       // Chuyển đổi response thành ReadableStream
       // Vì OpenAI SDK trả về Stream<ChatCompletionChunk> mà không phải ReadableStream trực tiếp
@@ -204,32 +180,108 @@ export async function POST(req: Request) {
 
 `;
                 controller.enqueue(encoder.encode(notificationChunk));
-              }
-              
-              // Nếu có ảnh đã tạo, gửi thông tin về ảnh
-              if (imageAttachment) {
-                const imageChunk = `data: ${JSON.stringify({ 
-                  imageAttachment,
-                  text: `Đã tạo ảnh từ mô tả: "${imageGenerationResponse?.prompt}"
+                
+                // Bắt đầu tạo ảnh sau khi đã gửi thông báo
+                if (shouldGenerateImage && translatedPrompt) {
+                  try {
+                    console.log("Starting image generation after notification was sent");
+                    
+                    // Đảm bảo imageDetection.prompt không phải là null (chúng ta đã kiểm tra ở điều kiện if trước đó)
+                    const promptText = imageDetection.prompt || "";
+                    
+                    // Gọi API tạo ảnh với prompt đã dịch
+                    const imageResponse = await fetch(new URL("/api/image", `${req.headers.get("origin") || "http://localhost:3000"}`).toString(), {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ 
+                        prompt: translatedPrompt,
+                        originalPrompt: promptText 
+                      }),
+                    });
+                    
+                    if (imageResponse.ok) {
+                      const imageData = await imageResponse.json() as { success: boolean; imageUrl?: string; error?: string };
+                      if (imageData.success && imageData.imageUrl) {
+                        console.log("Successfully generated image:", imageData.imageUrl);
+                        imageGenerationResponse = {
+                          success: true,
+                          imageUrl: imageData.imageUrl,
+                          prompt: promptText
+                        };
+                        
+                        // Tạo ảnh đính kèm sau khi tạo ảnh thành công
+                        const imageAttachment = {
+                          id: uuidv4(),
+                          type: "image",
+                          url: imageData.imageUrl,
+                          name: `AI Image: ${promptText.substring(0, 30)}${promptText.length > 30 ? "..." : ""}`,
+                          prompt: promptText
+                        };
+                        
+                        // Gửi thông tin ảnh đã tạo
+                        const imageChunk = `data: ${JSON.stringify({ 
+                          imageAttachment,
+                          text: `Đã tạo ảnh từ mô tả: "${promptText}"
 
 ` 
-                })}
+                        })}
 
 `;
-                controller.enqueue(encoder.encode(imageChunk));
+                        controller.enqueue(encoder.encode(imageChunk));
+                        
+                        // Kết thúc stream sau khi gửi ảnh
+                        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                        controller.close();
+                        return; // Kết thúc luồng xử lý sau khi gửi ảnh
+                      }
+                    } else {
+                      const errorData = await imageResponse.json();
+                      console.error("Error generating image:", errorData.error);
+                      
+                      // Gửi thông báo lỗi nếu không tạo được ảnh
+                      const errorChunk = `data: ${JSON.stringify({ 
+                        text: `Rất tiếc, tôi không thể tạo ảnh theo yêu cầu của bạn. ${errorData.error || ""}
+
+`
+                      })}
+
+`;
+                      controller.enqueue(encoder.encode(errorChunk));
+                    }
+                  } catch (error) {
+                    console.error("Exception when generating image:", error);
+                    
+                    // Gửi thông báo lỗi nếu có ngoại lệ
+                    const errorChunk = `data: ${JSON.stringify({ 
+                      text: `Rất tiếc, đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại sau.
+
+`
+                    })}
+
+`;
+                    controller.enqueue(encoder.encode(errorChunk));
+                  }
+                }
               }
               
-              // Xử lý từng chunk từ stream của OpenAI
-              for await (const chunk of response) {
-                // Lấy nội dung văn bản từ chunk
-                const text = chunk.choices[0]?.delta?.content || '';
-                if (text) {
-                  // Định dạng theo chuẩn SSE (Server-Sent Events)
-                  const formattedChunk = `data: ${JSON.stringify({ text })}
+              // Chỉ xử lý phản hồi từ LLM nếu không phải là yêu cầu tạo ảnh
+              if (!imageDetection.isImageRequest) {
+                // Xử lý từng chunk từ stream của OpenAI
+                for await (const chunk of response) {
+                  // Lấy nội dung văn bản từ chunk
+                  const text = chunk.choices[0]?.delta?.content || '';
+                  if (text) {
+                    // Định dạng theo chuẩn SSE (Server-Sent Events)
+                    const formattedChunk = `data: ${JSON.stringify({ text })}
 
 `;
-                  controller.enqueue(encoder.encode(formattedChunk));
+                    controller.enqueue(encoder.encode(formattedChunk));
+                  }
                 }
+              } else {
+                console.log('Skipping LLM response because image was generated');
               }
               // Kết thúc stream
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
