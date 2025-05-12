@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Check, Edit, Trash2, MoreVertical, ImageIcon, File, Smile, ThumbsUp, ThumbsDown } from "lucide-react"
+import { Check, Edit, Trash2, MoreVertical, ImageIcon, File, Smile, ThumbsUp, ThumbsDown, Copy, CheckCheck } from "lucide-react"
 import type { Message, Attachment } from "@/types/chat"
 import { useChatStore } from "@/lib/chat-store"
 import ReactMarkdown from "react-markdown"
@@ -24,13 +24,37 @@ interface MessageItemProps {
 export function MessageItem({ message }: MessageItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(message.content)
+  const [isCopied, setIsCopied] = useState(false)
   const editInputRef = useRef<HTMLTextAreaElement>(null)
+  const messageRef = useRef<HTMLDivElement>(null)
 
   const { editMessage, deleteMessage, markAsRead, addReaction, removeReaction, addFeedback } = useChatStore()
 
   const isUser = message.role === "user"
   const formattedTime = format(new Date(message.timestamp), "HH:mm", { locale: vi })
   const formattedDate = format(new Date(message.timestamp), "dd/MM/yyyy", { locale: vi })
+  
+  // Kiểm tra tin nhắn hiển thị trong viewport
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !message.isRead && message.role === "assistant") {
+          markAsRead(message.id)
+        }
+      },
+      { threshold: 0.5 }
+    )
+    
+    if (messageRef.current) {
+      observer.observe(messageRef.current)
+    }
+    
+    return () => {
+      if (messageRef.current) {
+        observer.unobserve(messageRef.current)
+      }
+    }
+  }, [message.id, message.isRead, message.role, markAsRead])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -55,6 +79,12 @@ export function MessageItem({ message }: MessageItemProps) {
     if (window.confirm("Bạn có chắc chắn muốn xóa tin nhắn này?")) {
       deleteMessage(message.id)
     }
+  }
+  
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(message.content)
+    setIsCopied(true)
+    setTimeout(() => setIsCopied(false), 2000)
   }
 
   const handleReaction = (emoji: string) => {
@@ -81,9 +111,9 @@ export function MessageItem({ message }: MessageItemProps) {
                 <img
                   src={attachment.url || "/placeholder.svg"}
                   alt={attachment.name}
-                  className="w-full h-auto object-cover rounded-md transition-transform group-hover:scale-105"
+                  className="w-full h-auto object-cover rounded-md transition-transform hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
+                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
                   <ImageIcon className="text-white opacity-0 group-hover:opacity-100 h-8 w-8" />
                 </div>
               </div>
@@ -134,8 +164,11 @@ export function MessageItem({ message }: MessageItemProps) {
   }
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4 group`}>
-      <div className={`flex ${isUser ? "flex-row-reverse" : "flex-row"} max-w-[80%]`}>
+    <div 
+      ref={messageRef}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4 group animate-fadeIn`}
+    >
+      <div className={`flex ${isUser ? "flex-row-reverse" : "flex-row"} max-w-[85%] md:max-w-[75%] lg:max-w-[65%]`}>
         {!isUser && (
           <Avatar className="h-8 w-8 mr-2 mt-1">
             <AvatarImage src="/laya-logo.png" alt="Laya" />
@@ -148,9 +181,9 @@ export function MessageItem({ message }: MessageItemProps) {
             <div
               className={`rounded-lg p-3 ${
                 isUser
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-              }`}
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm"
+              } relative transition-all hover:shadow-md`}
             >
               {isEditing ? (
                 <div className="flex flex-col">
@@ -173,13 +206,13 @@ export function MessageItem({ message }: MessageItemProps) {
               ) : (
                 <>
                   {message.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert">
+                    <div className="prose prose-sm dark:prose-invert prose-headings:my-2 prose-p:my-1.5 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5">
                       <ReactMarkdown>
                         {message.content}
                       </ReactMarkdown>
                     </div>
                   ) : (
-                    <p>{message.content}</p>
+                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
                   )}
                 </>
               )}
@@ -192,11 +225,24 @@ export function MessageItem({ message }: MessageItemProps) {
             </div>
 
             {!isEditing && (
-              <div className={`opacity-0 group-hover:opacity-100 transition-opacity ${isUser ? "mr-2" : "ml-2"}`}>
+              <div className={`opacity-0 group-hover:opacity-100 transition-opacity ${isUser ? "mr-2" : "ml-2"} flex items-center gap-1`}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopyMessage}>
+                        {isCopied ? <CheckCheck className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{isCopied ? "Đã sao chép" : "Sao chép"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <MoreVertical className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align={isUser ? "end" : "start"}>
@@ -226,7 +272,7 @@ export function MessageItem({ message }: MessageItemProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-6 w-6 rounded-full ${message.feedback === "positive" ? "bg-green-100 text-green-600" : ""}`}
+                className={`h-6 w-6 rounded-full ${message.feedback === "positive" ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400" : ""} transition-colors`}
                 onClick={() => handleFeedback("positive")}
                 title="Phản hồi hữu ích"
               >
@@ -235,7 +281,7 @@ export function MessageItem({ message }: MessageItemProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-6 w-6 rounded-full ${message.feedback === "negative" ? "bg-red-100 text-red-600" : ""}`}
+                className={`h-6 w-6 rounded-full ${message.feedback === "negative" ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400" : ""} transition-colors`}
                 onClick={() => handleFeedback("negative")}
                 title="Phản hồi không hữu ích"
               >
@@ -252,7 +298,7 @@ export function MessageItem({ message }: MessageItemProps) {
                   <Badge
                     key={reaction.emoji}
                     variant="outline"
-                    className="px-2 py-0 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="px-2 py-0 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     onClick={() => handleReaction(reaction.emoji)}
                   >
                     {reaction.emoji} {reaction.count}
@@ -263,47 +309,40 @@ export function MessageItem({ message }: MessageItemProps) {
           )}
 
           {/* Message info */}
-          <div className={`flex items-center mt-1 text-xs text-gray-500 ${isUser ? "justify-end" : "justify-start"}`}>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>{formattedTime}</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{formattedDate}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-400 space-x-2">
+            <span>{formattedTime}</span>
+            <span title={formattedDate}>·</span>
 
-            {message.isEdited && <span className="ml-1">(đã chỉnh sửa)</span>}
-
-            {message.isRead && (
-              <span className="ml-1 flex items-center">
-                <Check className="h-3 w-3 mr-1" />
-                Đã đọc
+            {message.isRead && message.role === "user" && (
+              <span title="Đã đọc" className="text-blue-500 animate-fadeIn">
+                <Check className="h-3 w-3" />
               </span>
             )}
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
-                  <Smile className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <div className="flex space-x-2">
-                  {EMOJI_LIST.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => handleReaction(emoji)}
-                      className="text-xl hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded-full transition-colors"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+            {message.reactions && message.reactions.length > 0 && (
+              <div className="flex space-x-1">
+                {message.reactions.map((reaction) => (
+                  <span
+                    key={reaction.emoji}
+                    className="bg-gray-100 dark:bg-gray-800 rounded-full px-1.5 py-0.5 flex items-center transition-transform hover:scale-110"
+                  >
+                    {reaction.emoji} <span className="ml-1 text-[10px]">{reaction.count}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {message.feedback && (
+              <span
+                className={`flex items-center ${message.feedback === "positive" ? "text-green-500" : "text-red-500"}`}
+              >
+                {message.feedback === "positive" ? (
+                  <ThumbsUp className="h-3 w-3" />
+                ) : (
+                  <ThumbsDown className="h-3 w-3" />
+                )}
+              </span>
+            )}
           </div>
         </div>
       </div>

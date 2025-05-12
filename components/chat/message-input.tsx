@@ -164,7 +164,7 @@ export function MessageInput() {
   }
 
   return (
-    <div className="p-4 border-t bg-white dark:bg-gray-900 dark:border-gray-800">
+    <div className="p-4 border-t bg-white dark:bg-gray-900 dark:border-gray-800 transition-all shadow-sm sticky bottom-0 z-10">
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -203,13 +203,21 @@ export function MessageInput() {
       )}
 
       {attachments.length > 0 && (
-        <div className="mb-2">
+        <div className="mb-4 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-fadeIn">
           <div className="flex flex-wrap gap-2">
             {attachments.map((file, index) => (
-              <div key={index} className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-1 pr-2">
+              <div 
+                key={index} 
+                className="flex items-center bg-white dark:bg-gray-700 rounded-md p-1.5 pr-2 shadow-sm transition-all hover:shadow-md"
+              >
                 {getAttachmentIcon(file)}
-                <span className="mx-1 text-sm truncate max-w-[150px] dark:text-white">{file.name}</span>
-                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeAttachment(index)}>
+                <span className="mx-1.5 text-sm truncate max-w-[150px] dark:text-white">{file.name}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-5 w-5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600" 
+                  onClick={() => removeAttachment(index)}
+                >
                   <X className="h-3 w-3" />
                 </Button>
               </div>
@@ -228,69 +236,75 @@ export function MessageInput() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={networkStatus !== "online" || isTyping}
-              >
-                <Paperclip className="h-5 w-5" />
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  multiple
-                  accept="image/*,video/*,application/*"
-                />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Đính kèm tệp</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <div className="relative flex-1">
+      <form onSubmit={handleSubmit} className="flex items-end gap-2">
+        <div className="flex-1 relative">
           <Input
             ref={messageInputRef}
+            type="text"
+            placeholder={
+              isTyping 
+                ? "Trợ lý đang nhập..." 
+                : networkStatus === "offline" 
+                  ? "Đang mất kết nối..." 
+                  : "Nhập tin nhắn của bạn..."
+            }
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={
-              isTyping
-                ? "Trợ lý đang nhập..."
-                : networkStatus === "offline"
-                  ? "Đang mất kết nối..."
-                  : networkStatus === "reconnecting"
-                    ? "Đang kết nối lại..."
-                    : "Nhập tin nhắn..."
-            }
-            className="flex-1 pr-8 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-            disabled={isTyping || networkStatus !== "online"}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                handleSubmit(e)
-              }
-            }}
+            className="pr-12 py-6 text-base rounded-full pl-5 shadow-sm border-gray-300 dark:border-gray-700 focus-visible:ring-2 focus-visible:ring-primary transition-all"
+            disabled={isTyping || networkStatus === "offline"}
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">{getNetworkStatusIcon()}</div>
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isTyping || networkStatus === "offline"}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Đính kèm tệp</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            multiple
+            accept="image/*,video/*,application/*"
+            disabled={isTyping || networkStatus === "offline"}
+          />
         </div>
-
         <Button
           type="submit"
-          disabled={isTyping || networkStatus !== "online" || (!message.trim() && attachments.length === 0)}
-          className="transition-all duration-200 hover:scale-105"
+          size="icon"
+          disabled={(!message.trim() && attachments.length === 0) || isTyping || networkStatus === "offline"}
+          className={`h-12 w-12 rounded-full ${isTyping ? "opacity-50 cursor-not-allowed" : "hover:scale-105 transition-transform"}`}
         >
-          <Send className="h-4 w-4" />
-          <span className="sr-only">Gửi</span>
+          <Send className="h-5 w-5" />
         </Button>
       </form>
+
+      {/* Network status indicator */}
+      <div className="flex justify-end mt-2">
+        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+          <span className="mr-1">{getNetworkStatusIcon()}</span>
+          <span>
+            {networkStatus === "online"
+              ? "Đã kết nối"
+              : networkStatus === "offline"
+              ? "Mất kết nối"
+              : "Đang kết nối lại..."}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
