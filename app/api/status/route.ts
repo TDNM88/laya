@@ -1,4 +1,4 @@
-import { testOpenRouterConnection } from "@/lib/openrouter-client"
+import { testGroqConnection } from "@/lib/groq-client"
 import fs from "fs"
 import path from "path"
 
@@ -6,8 +6,8 @@ export const runtime = "nodejs"
 
 export async function GET() {
   try {
-    // Kiểm tra kết nối với OpenRouter
-    const openRouterStatus = await testOpenRouterConnection()
+    // Kiểm tra kết nối với Groq API
+    const groqStatus = await testGroqConnection()
 
     // Kiểm tra kết nối với cơ sở dữ liệu kiến thức
     let knowledgeStatus = { success: false, message: "Chưa kiểm tra" }
@@ -37,9 +37,9 @@ export async function GET() {
     return new Response(
       JSON.stringify({
         timestamp: new Date().toISOString(),
-        openRouter: {
-          status: openRouterStatus.success ? "online" : "offline",
-          message: openRouterStatus.message,
+        groqApi: {
+          status: groqStatus.success ? "online" : "offline",
+          message: groqStatus.message,
         },
         knowledgeBase: {
           status: knowledgeStatus.success ? "available" : "unavailable",
@@ -47,7 +47,7 @@ export async function GET() {
         },
         environment: {
           nodeEnv: process.env.NODE_ENV || "development",
-          hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+          hasGroqApiKey: !!process.env.GROQ_API_KEY,
         },
       }),
       { headers: { "Content-Type": "application/json" } },

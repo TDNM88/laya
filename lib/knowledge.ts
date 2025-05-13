@@ -320,33 +320,55 @@ function cosineSimilarity(a: number[], b: number[]): number {
   // Xử lý các trường hợp đặc biệt (NaN, Infinity)
   if (isNaN(similarity) || !isFinite(similarity)) {
     return 0;
+  }
+  
+  return similarity;
 }
 
-const similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+// Hàm trích xuất từ khóa từ câu hỏi
+function extractKeywords(query: string): string[] {
+  // Danh sách các từ dừng (stop words) tiếng Việt
+  const stopWords = [
+    "và", "của", "là", "để", "trong", "có", "không", "với", "các", "lên", "về", "cho", "bị", "lúc", "ra", "tại", "vừa", "một", "như", "còn", "lại", 
+    "vời", "các", "bị", "làm", "nên", "theo", "tạo", "thì", "hay", "trên", "vào", "bạn", "tôi", "anh", "chị", "em", "họ", "cô", "chú", "bác", "chúng", "ta", "mình", "cái", "này", "nào", "thế", "mà", "rằng", "thì", "làm", "sao", "vậy", "nên", "khi", "phải", "cần", "muốn", "gì", "còn"
+  ];
   
-// Xử lý các trường hợp đặc biệt (NaN, Infinity)
-if (isNaN(similarity) || !isFinite(similarity)) {
-  return 0;
-}
+  // Chuẩn hóa câu hỏi
+  const normalizedQuery = query.toLowerCase().trim();
   
-return similarity;
+  // Tách các từ trong câu hỏi
+  const words = normalizedQuery.split(/\s+/);
+  
+  // Loại bỏ các từ dừng
+  const filteredWords = words.filter(word => {
+    // Loại bỏ các từ quá ngắn
+    if (word.length < 2) return false;
+    
+    // Loại bỏ các từ dừng
+    if (stopWords.includes(word)) return false;
+    
+    return true;
+  });
+  
+  // Trả về các từ khóa duy nhất
+  return [...new Set(filteredWords)];
 }
 
 // Tìm kiếm thông tin từ knowledge base với độ chính xác cao
 export async function searchDocuments(query: string): Promise<Array<{content: string; source: string; similarity: number}>> {
-await loadKnowledgeBase()
+  await loadKnowledgeBase();
 
-// If no knowledge is loaded, return an empty array
-if (knowledgeCache.chunks.length === 0) {
-  console.warn("No knowledge chunks available for search")
-  return []
-}
+  // If no knowledge is loaded, return an empty array
+  if (knowledgeCache.chunks.length === 0) {
+    console.warn("No knowledge chunks available for search");
+    return [];
+  }
 
-try {
-  // Chuẩn hóa câu hỏi để tăng khả năng tìm kiếm
-  const normalizedQuery = query.toLowerCase().trim();
-  
-  // Phân tích từ khóa quan trọng trong câu hỏi
+  try {
+    // Chuẩn hóa câu hỏi để tăng khả năng tìm kiếm
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // Phân tích từ khóa quan trọng trong câu hỏi
   const keywords = extractKeywords(normalizedQuery);
   
   // Tìm kiếm chính xác trước (exact match)
@@ -421,37 +443,18 @@ try {
   if (relevantChunks.length === 0) {
     console.log("No chunks above threshold, returning top 5 results regardless of similarity");
     return knowledgeCache.chunks
-    
-    // Find the most relevant chunks
-    const relevantChunks = knowledgeCache.chunks
       .map((chunk) => ({
         content: chunk.text,
         source: chunk.source,
         similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
       }))
-      // Lọc các kết quả có độ tương đồng thấp
-      .filter(chunk => chunk.similarity >= MIN_SIMILARITY_THRESHOLD)
       .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 7) // Tăng lên 7 kết quả để có nhiều thông tin hơn
-    
-    console.log(`Found ${relevantChunks.length} relevant chunks for query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
-    
-    // Nếu vẫn không tìm thấy kết quả, trả về top 5 kết quả gần nhất bất kể độ tương đồng
-    if (relevantChunks.length === 0) {
-      console.log("No chunks above threshold, returning top 5 results regardless of similarity");
-      return knowledgeCache.chunks
-        .map((chunk) => ({
-          content: chunk.text,
-          source: chunk.source,
-          similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
-        }))
-        .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, 5);
-    }
-    
-    return relevantChunks
-  } catch (error) {
-    console.error("Error searching knowledge base:", error)
-    return [] // Return empty array in case of error
+      .slice(0, 5);
   }
+  
+  return relevantChunks;
+} catch (error) {
+  console.error("Error searching knowledge base:", error);
+  return []; // Return empty array in case of error
+}
 }
