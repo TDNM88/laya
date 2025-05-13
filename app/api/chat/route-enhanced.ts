@@ -52,9 +52,17 @@ export async function POST(req: Request) {
     // Phát hiện yêu cầu tạo ảnh
     const imageDetection = detectImageGenerationRequest(lastMessage)
     let shouldGenerateImage = false
-    let translatedPrompt = null
-    let imageGenerationNotification = null
-    let imageGenerationResponse = null
+    let translatedPrompt: string | null = null
+    let imageGenerationNotification: string | null = null
+    
+    // Định nghĩa kiểu dữ liệu cho imageGenerationResponse
+    interface ImageGenerationResponse {
+      success: boolean;
+      imageUrl: string;
+      prompt: string;
+    }
+    
+    let imageGenerationResponse: ImageGenerationResponse | null = null
     
     if (imageDetection.isImageRequest && imageDetection.prompt) {
       console.log("Image generation request detected:", imageDetection.prompt)
@@ -401,8 +409,15 @@ export async function GET(req: Request) {
       )
     }
 
+    // Định nghĩa kiểu dữ liệu cho groqStatus
+    interface GroqStatus {
+      available: boolean;
+      message: string;
+      model: string | null;
+    }
+    
     // Kiểm tra kết nối với Groq
-    let groqStatus = { available: false, message: "Không thể kết nối đến Groq API", model: null }
+    let groqStatus: GroqStatus = { available: false, message: "Không thể kết nối đến Groq API", model: null }
     try {
       const connectionTest = await testGroqConnection()
       groqStatus = { 
@@ -414,8 +429,18 @@ export async function GET(req: Request) {
       console.error("Error testing Groq connection:", error)
     }
 
+    // Định nghĩa kiểu dữ liệu cho stats
+    interface KnowledgeStats {
+      totalChunks: number;
+      categories: Record<string, number>;
+      sourceCount: number;
+      lastUpdated: Date;
+    }
+    
     // Kiểm tra knowledge base
-    let knowledgeStatus = { available: false, message: "Không thể tải knowledge base", stats: null }
+    let knowledgeStatus: { available: boolean; message: string; stats: KnowledgeStats | null } = 
+      { available: false, message: "Không thể tải knowledge base", stats: null }
+      
     try {
       // Lấy thông tin thống kê từ knowledge base
       const stats = getKnowledgeBaseStats();
