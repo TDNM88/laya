@@ -1,7 +1,7 @@
 // Sử dụng Response API tiêu chuẩn của Next.js thay vì thư viện ai
 // vì có thể có sự không tương thích giữa phiên bản
 import { createClient, testGroqConnection, MODEL_CONFIG } from "@/lib/groq-client"
-import { searchDocuments, getKnowledgeBaseStats, reloadKnowledgeBase } from "@/lib/knowledge-fixed"
+import { searchDocuments, getKnowledgeBaseStats } from "@/lib/knowledge-enhanced"
 import { detectImageGenerationRequest, translatePromptToEnglish } from "@/lib/image-detection"
 import { v4 as uuidv4 } from "uuid"
 
@@ -74,28 +74,29 @@ export async function POST(req: Request) {
       }
     }
 
-    // Tải lại knowledge base trước khi xử lý mỗi yêu cầu
-    try {
-      // Tải lại knowledge base với force=true để đảm bảo có dữ liệu mới nhất
-      await reloadKnowledgeBase();
-      console.log("Knowledge base reloaded successfully");
-    } catch (error) {
-      console.error("Error reloading knowledge base:", error);
-    }
-
     // Tìm kiếm tài liệu liên quan nếu không phải là yêu cầu tạo ảnh
     let relevantDocs: Array<{content: string; source: string; similarity: number}> = []
     if (!imageDetection.isImageRequest) {
       try {
+        // Sử dụng hàm searchDocuments cải tiến từ knowledge-enhanced.ts
         relevantDocs = await searchDocuments(lastMessage)
-        console.log(`Found ${relevantDocs.length} relevant documents for query: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`)
+        console.log(`Found ${relevantDocs.length} relevant documents`)
+        
+        // Hiển thị thông tin chi tiết về các tài liệu tìm thấy
+        if (relevantDocs.length > 0) {
+          console.log("Top relevant documents:")
+          relevantDocs.slice(0, 3).forEach((doc, index) => {
+            console.log(`${index + 1}. Source: ${doc.source}, Similarity: ${Math.round(doc.similarity * 100)}%`)
+            console.log(`   Preview: ${doc.content.substring(0, 100)}...`)
+          })
+        }
       } catch (error) {
         console.error("Error searching documents:", error)
         // Tiếp tục xử lý mà không có tài liệu liên quan
       }
     }
 
-    // Tạo context từ các tài liệu liên quan nhưng không hiển thị nguồn trong phần trả lời
+    // Tạo context từ các tài liệu liên quan với cấu trúc cải tiến
     let context = ""
     if (relevantDocs.length > 0) {
       // Sắp xếp tài liệu theo độ liên quan giảm dần
@@ -109,18 +110,18 @@ export async function POST(req: Request) {
       
       console.log("Source information (internal only):\n" + sourceInfo);
       
-      // Tạo context với định dạng rõ ràng hơn để ngăn va trộn thông tin
+      // Tạo context với định dạng cải tiến để ngăn va trộn thông tin
       context = "THÔNG TIN CHÍNH XÁC TỪ CƠ SỞ KIẾN THỨC (HÃY TRÍCH DẪN NGUYÊN VĂN VÀ KHÔNG THÊM BỚT THÔNG TIN):\n\n";
       
       // Thêm từng tài liệu với phân cách rõ ràng và thông tin nguồn chi tiết hơn
       sortedDocs.forEach((doc, index) => {
-        // Giảm ngưỡng độ liên quan xuống 50% để có nhiều thông tin hơn
+        // Cải tiến: Giảm ngưỡng độ liên quan xuống 50% để có nhiều thông tin hơn
         // nhưng ưu tiên hiển thị các tài liệu có độ liên quan cao hơn
         if (doc.similarity >= 0.5) {
           // Trích xuất tên file từ đường dẫn nguồn để hiển thị dễ đọc hơn
           const sourceName = doc.source.split('/').pop() || doc.source;
           
-          // Thêm phân cách rõ ràng giữa các tài liệu với độ tương đồng
+          // Thêm phân cách rõ ràng giữa các tài liệu
           context += `--- THÔNG TIN ${index + 1} (${Math.round(doc.similarity * 100)}% LIÊN QUAN) ---\n${doc.content}\n\n`;
         }
       });
@@ -134,17 +135,15 @@ export async function POST(req: Request) {
     HƯỚNG DẪN BẮT BUỘC:
     1. TRẢ LỜI ĐẦY ĐỦ VÀ CHI TIẾT NHẤT CÓ THỂ, sử dụng tối đa số lượng token cho phép (4000 token) để cung cấp thông tin đầy đủ và hữu ích.
     2. TRÍCH DẪN NGUYÊN VĂN các phần liên quan từ cơ sở kiến thức, đảm bảo tính chính xác tuyệt đối. KHÔNG ĐƯỢC thêm hoặc bớt thông tin.
-    3. KHI ĐƯỢC YÊU CẦU TRÍCH DẪN ĐOẠN DÀI, HÃY TRÍCH DẪN NGUYÊN VĂN TOÀN BỘ ĐOẠN ĐÓ mà không rút gọn, tóm tắt hay thay đổi nội dung.
-    4. TỔ CHỨC THÔNG TIN MỘT CÁCH RÕ RÀNG với các tiêu đề, đề mục và phân đoạn hợp lý để dễ đọc và hiểu.
-    5. KHÔNG ĐƯỢC trích dẫn nguồn trong câu trả lời. Hãy trả lời như thể thông tin đó là của bạn.
-    6. Nếu không có thông tin liên quan trong cơ sở kiến thức, hãy nói rằng bạn không có thông tin về vấn đề đó và đề nghị người dùng liên hệ với Mentor Laya để được hỗ trợ.
-    7. KHÔNG ĐƯỢC tạo ra các thông tin sai lệch hoặc không có trong cơ sở kiến thức.
-    8. Sử dụng CHÍNH XÁC các từ ngữ và cụm từ trong tài liệu, không tự ý thay đổi cách diễn đạt.
-    9. TRÁNH VA TRỘN thông tin giữa các nguồn khác nhau, giữ rõ ràng ranh giới giữa các nội dung.
-    10. LUÔN SỬ DỤNG TỐI ĐA SỐ LƯỢNG TOKEN (4000) để cung cấp thông tin chi tiết và đầy đủ nhất có thể.
-    11. Khi trả lời các câu hỏi về Đông y, hãy đảm bảo giải thích các khái niệm một cách dễ hiểu và đầy đủ.
-    12. Khi trả lời các câu hỏi về chính sách, hãy nêu rõ các quy định và điều kiện áp dụng.
-    13. Nếu được yêu cầu trích nguyên văn một đoạn, hãy sử dụng dấu ngoặc kép (") để đánh dấu đoạn trích dẫn và đảm bảo trích dẫn chính xác từ đầu đến cuối.
+    3. TỔ CHỨC THÔNG TIN MỘT CÁCH RÕ RÀNG với các tiêu đề, đề mục và phân đoạn hợp lý để dễ đọc và hiểu.
+    4. KHÔNG ĐƯỢC trích dẫn nguồn trong câu trả lời. Hãy trả lời như thể thông tin đó là của bạn.
+    5. Nếu không có thông tin liên quan trong cơ sở kiến thức, hãy nói rằng bạn không có thông tin về vấn đề đó và đề nghị người dùng liên hệ với Mentor Laya để được hỗ trợ.
+    6. KHÔNG ĐƯỢC tạo ra các thông tin sai lệch hoặc không có trong cơ sở kiến thức.
+    7. Sử dụng chính xác các từ ngữ và cụm từ trong tài liệu, không tự ý thay đổi cách diễn đạt.
+    8. TRÁNH VA TRỘN thông tin giữa các nguồn khác nhau, giữ rõ ràng ranh giới giữa các nội dung.
+    9. LUÔN SỬ DỤNG TỐI ĐA SỐ LƯỢNG TOKEN (4000) để cung cấp thông tin chi tiết và đầy đủ nhất có thể.
+    10. Khi trả lời các câu hỏi về Đông y, hãy đảm bảo giải thích các khái niệm một cách dễ hiểu và đầy đủ.
+    11. Khi trả lời các câu hỏi về chính sách, hãy nêu rõ các quy định và điều kiện áp dụng.
     
     Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp. Sử dụng emoji 🌿 khi nói về sản phẩm Laya và ✨ khi nói về hệ thống Mentor.`
 
@@ -267,234 +266,198 @@ export async function POST(req: Request) {
                       }
                     } else {
                       const errorData = await imageResponse.json();
-                      console.error("Error generating image:", errorData.error);
+                      console.error("Error generating image:", errorData);
                       
-                      // Gửi thông báo lỗi nếu không tạo được ảnh
+                      // Gửi thông báo lỗi
                       const errorChunk = `data: ${JSON.stringify({ 
-                        text: `Rất tiếc, tôi không thể tạo ảnh theo yêu cầu của bạn. ${errorData.error || ""}
-
-`
+                        text: `Rất tiếc, tôi không thể tạo ảnh từ mô tả của bạn. Lỗi: ${errorData.error || "Không xác định"}`
                       })}
 
 `;
                       controller.enqueue(encoder.encode(errorChunk));
+                      
+                      // Tiếp tục với phản hồi văn bản thông thường
                     }
-                  } catch (error) {
-                    console.error("Exception when generating image:", error);
+                  } catch (imageError) {
+                    console.error("Error in image generation process:", imageError);
                     
-                    // Gửi thông báo lỗi nếu có ngoại lệ
+                    // Gửi thông báo lỗi
                     const errorChunk = `data: ${JSON.stringify({ 
-                      text: `Rất tiếc, đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại sau.
-
-`
+                      text: "Rất tiếc, đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại sau."
                     })}
 
 `;
                     controller.enqueue(encoder.encode(errorChunk));
+                    
+                    // Tiếp tục với phản hồi văn bản thông thường
                   }
                 }
               }
               
-              // Xử lý phản hồi từ mô hình nếu không phải là yêu cầu tạo ảnh hoặc sau khi đã xử lý lỗi tạo ảnh
-              if (!shouldGenerateImage || (imageGenerationNotification && !translatedPrompt)) {
-                try {
-                  let accumulatedText = "";
+              // Xử lý stream từ Groq API
+              let responseText = "";
+              
+              // Nếu đã gửi ảnh thành công, không cần gửi phản hồi văn bản
+              if (imageGenerationResponse && imageGenerationResponse.success) {
+                console.log("Image was generated successfully, skipping text response");
+                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                controller.close();
+                return;
+              }
+              
+              // Xử lý stream từ Groq API
+              for await (const chunk of response) {
+                // Lấy nội dung từ chunk
+                const content = chunk.choices[0]?.delta?.content || "";
+                if (content) {
+                  responseText += content;
                   
-                  // Xử lý từng chunk từ stream để tối đa hóa số lượng token
-                  for await (const chunk of response) {
-                    if (chunk.choices && chunk.choices[0]?.delta?.content) {
-                      const content = chunk.choices[0].delta.content;
-                      accumulatedText += content;
-                      
-                      // Gửi phản hồi theo từng đoạn để hiển thị ngay lập tức
-                      const dataChunk = `data: ${JSON.stringify({ text: content })}\n\n`;
-                      controller.enqueue(encoder.encode(dataChunk));
-                    }
-                  }
-                  
-                  console.log(`Total response length: ${accumulatedText.length} characters`);
-                  
-                  // Kết thúc stream
-                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                  controller.close();
-                } catch (error) {
-                  console.error('Error processing model response:', error);
-                  controller.error(error);
+                  // Gửi chunk đến client
+                  const dataChunk = `data: ${JSON.stringify({ text: content })}
+
+`;
+                  controller.enqueue(encoder.encode(dataChunk));
                 }
               }
-            } catch (error) {
-              console.error('Error in stream processing:', error);
-              controller.error(error);
+              
+              console.log("Stream completed");
+              console.log("Total response length:", responseText.length);
+              
+              // Kết thúc stream
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.close();
+            } catch (streamError) {
+              console.error("Error processing stream:", streamError);
+              
+              // Gửi thông báo lỗi
+              const errorChunk = `data: ${JSON.stringify({ 
+                text: "Rất tiếc, đã xảy ra lỗi khi xử lý phản hồi. Vui lòng thử lại sau."
+              })}
+
+`;
+              controller.enqueue(encoder.encode(errorChunk));
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.close();
             }
           }
         }),
         {
           headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive'
-          }
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
         }
-      )
+      );
     } catch (error) {
       console.error("Error creating chat completion:", error)
+      
+      // Trả về lỗi dưới dạng stream để client có thể hiển thị
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            const encoder = new TextEncoder();
+            const errorMessage = `data: ${JSON.stringify({ 
+              text: "Rất tiếc, đã xảy ra lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại sau."
+            })}
 
-      // Phân tích lỗi để cung cấp thông báo lỗi cụ thể
-      let errorMessage = "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau."
-      let statusCode = 500
-
-      if (error instanceof Error) {
-        if (error.message.includes("API key")) {
-          errorMessage = "API key không hợp lệ hoặc đã hết hạn."
-          statusCode = 401
-        } else if (error.message.includes("model")) {
-          errorMessage = `Mô hình ${MODEL_CONFIG.modelId} không khả dụng hoặc không được hỗ trợ.`
-          statusCode = 400
-        } else if (error.message.includes("rate limit")) {
-          errorMessage = "Đã vượt quá giới hạn tốc độ API. Vui lòng thử lại sau."
-          statusCode = 429
-        } else if (error.message.includes("timeout")) {
-          errorMessage = "Yêu cầu đã hết thời gian chờ. Vui lòng thử lại sau."
-          statusCode = 504
-        }
-      }
-
-      // Thử phương án dự phòng - trả về phản hồi không streaming
-      try {
-        console.log("Attempting fallback to non-streaming response")
-        
-        // Thử với các mô hình dự phòng nếu lỗi liên quan đến mô hình
-        let fallbackModelToUse = modelToUse;
-        if (error instanceof Error && error.message.includes("model") && modelToUse === MODEL_CONFIG.modelId) {
-          // Thử với mô hình dự phòng đầu tiên
-          if (MODEL_CONFIG.fallbackModels && MODEL_CONFIG.fallbackModels.length > 0) {
-            fallbackModelToUse = MODEL_CONFIG.fallbackModels[0];
-            console.log(`Trying fallback model: ${fallbackModelToUse}`);
+`;
+            controller.enqueue(encoder.encode(errorMessage));
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
           }
+        }),
+        {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
         }
-        
-        // Thiết lập timeout cho yêu cầu dự phòng
-        const abortController = new AbortController();
-        const timeoutId = setTimeout(() => {
-          abortController.abort();
-        }, 30000); // 30 giây timeout cho phương án dự phòng
-        
-        const fallbackResponse = await groq.chat.completions.create({
-          model: fallbackModelToUse,
-          messages: [{ role: "system", content: systemPrompt }, ...messages],
-          stream: false,
-          temperature: MODEL_CONFIG.temperature,
-          max_tokens: MODEL_CONFIG.maxTokens,
-        }, { signal: abortController.signal });
-        
-        clearTimeout(timeoutId);
-        
-        if (fallbackResponse.choices && fallbackResponse.choices.length > 0) {
-          const content = fallbackResponse.choices[0].message.content || "";
-          console.log("Fallback response received successfully");
-          
-          return new Response(
-            JSON.stringify({ 
-              text: content,
-              imageAttachment: imageGenerationResponse ? {
-                id: uuidv4(),
-                type: "image",
-                url: imageGenerationResponse.imageUrl || '',
-                name: `AI Image: ${(imageGenerationResponse.prompt || '').substring(0, 30)}${(imageGenerationResponse.prompt || '').length > 30 ? "..." : ""}`,
-                prompt: imageGenerationResponse.prompt || ''
-              } : null
-            }),
-            { 
-              status: 200, 
-              headers: { "Content-Type": "application/json" } 
-            }
-          );
-        } else {
-          throw new Error("No content in fallback response");
-        }
-      } catch (fallbackError) {
-        console.error("Fallback response failed:", fallbackError);
-        
-        // Nếu cả phương án dự phòng cũng thất bại, trả về lỗi ban đầu
-        return new Response(
-          JSON.stringify({ error: errorMessage }),
-          { status: statusCode, headers: { "Content-Type": "application/json" } }
-        );
-      }
+      );
     }
   } catch (error) {
-    console.error("Unhandled error in API route:", error);
-    return new Response(
-      JSON.stringify({ error: "Đã xảy ra lỗi không xác định. Vui lòng thử lại sau." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    console.error("Unhandled error in API route:", error)
+    return new Response(JSON.stringify({ error: "Đã xảy ra lỗi không xác định" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
   }
 }
 
 // Thêm endpoint để kiểm tra trạng thái API
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const connectionTest = await testGroqConnection()
+    // Kiểm tra API key
+    const apiKey = process.env.GROQ_API_KEY
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ 
+          status: "error", 
+          groq: { available: false, message: "API key không được cấu hình" },
+          knowledge: { available: false, message: "Không thể kiểm tra vì Groq API không khả dụng" }
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
 
-    // Kiểm tra các tệp kiến thức
-    let knowledgeStatus = {
-      success: true,
-      message: "Cơ sở kiến thức hoạt động bình thường",
-      error: null as string | null
-    }
-    
+    // Kiểm tra kết nối với Groq
+    let groqStatus = { available: false, message: "Không thể kết nối đến Groq API", model: null }
     try {
-      // Thử tìm kiếm với một truy vấn đơn giản để kiểm tra cơ sở kiến thức
-      await searchDocuments("test")
+      const connectionTest = await testGroqConnection()
+      groqStatus = { 
+        available: connectionTest.success, 
+        message: connectionTest.message,
+        model: connectionTest.modelTested || null
+      }
     } catch (error) {
-      knowledgeStatus = {
-        success: false,
-        message: "Không thể truy cập cơ sở kiến thức",
-        error: error instanceof Error ? error.message : "Unknown error"
-      }
+      console.error("Error testing Groq connection:", error)
     }
-    
-    // Kiểm tra API tạo ảnh
-    let imageApiStatus = {
-      success: true,
-      message: "API tạo ảnh hoạt động bình thường",
-      error: null as string | null
-    }
-    
+
+    // Kiểm tra knowledge base
+    let knowledgeStatus = { available: false, message: "Không thể tải knowledge base", stats: null }
     try {
-      // Kiểm tra API key của TensorArt
-      const tensorArtApiKey = process.env.TENSORART_API_KEY
-      if (!tensorArtApiKey) {
-        throw new Error("TENSORART_API_KEY không được cấu hình")
-      }
+      // Lấy thông tin thống kê từ knowledge base
+      const stats = getKnowledgeBaseStats();
       
-      // Không thực sự gọi API tạo ảnh vì tốn tài nguyên, chỉ kiểm tra API key
-    } catch (error) {
-      imageApiStatus = {
-        success: false,
-        message: "Không thể kết nối đến API tạo ảnh",
-        error: error instanceof Error ? error.message : "Unknown error"
-      }
-    }
-    
-    return new Response(
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        groq: connectionTest,
-        knowledge: knowledgeStatus,
-        imageApi: imageApiStatus,
-        config: {
-          modelId: MODEL_CONFIG.modelId,
-          maxTokens: MODEL_CONFIG.maxTokens
+      knowledgeStatus = {
+        available: stats.totalChunks > 0,
+        message: stats.totalChunks > 0 
+          ? `Đã tải ${stats.totalChunks} chunks từ ${Object.keys(stats.sources).length} tài liệu` 
+          : "Knowledge base trống hoặc chưa được tải",
+        stats: {
+          totalChunks: stats.totalChunks,
+          categories: stats.categories,
+          sourceCount: Object.keys(stats.sources).length,
+          lastUpdated: stats.lastUpdated
         }
+      }
+    } catch (error) {
+      console.error("Error checking knowledge base:", error)
+    }
+
+    // Kiểm tra TensorArt API
+    let tensorartStatus = { available: false, message: "API key không được cấu hình" }
+    const tensorartApiKey = process.env.TENSORART_API_KEY
+    if (tensorartApiKey) {
+      tensorartStatus = { available: true, message: "API key đã được cấu hình" }
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        status: "success", 
+        groq: groqStatus,
+        knowledge: knowledgeStatus,
+        tensorart: tensorartStatus
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     )
   } catch (error) {
+    console.error("Error in health check:", error)
     return new Response(
-      JSON.stringify({
-        error: "Không thể kiểm tra trạng thái API",
-        message: error instanceof Error ? error.message : "Unknown error"
+      JSON.stringify({ 
+        status: "error", 
+        message: "Đã xảy ra lỗi khi kiểm tra trạng thái API"
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     )

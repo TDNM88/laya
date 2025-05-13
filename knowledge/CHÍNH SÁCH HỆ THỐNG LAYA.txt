@@ -1,10 +1,14 @@
-CHÍNH SÁCH HỆ THỐNG LAYA
+﻿CHÍNH SÁCH HỆ THỐNG LAYA
 “Một hành trình – Năm cấp độ – Chinh phục đỉnh cao”
+________________
+
 
 I. MỤC TIÊU HỆ THỐNG
 Trong thế giới đang ngày càng chuyển động nhanh, con người không chỉ cần một sự nghiệp – mà cần một hành trình thức tỉnh. Tại Laya, chúng tôi tin rằng: khi nội tâm đủ vững vàng, hành động mới đủ vững chãi. Khi bên trong hòa hợp, bên ngoài sẽ thịnh vượng.
 Vì thế, hành trình Laya không đơn thuần là một lộ trình kinh doanh, mà là con đường phát triển bản thân toàn diện, được thiết kế thông qua 5 cấp độ huấn luyện chuyên sâu – mỗi cấp độ là một lần lột xác, một lần tái sinh chính mình.
 .
+________________
+
 
 II.  CẤU TRÚC HỆ THỐNG: 5 CẤP MENTOR
 Tại Laya, không cần bạn bắt đầu lớn – chỉ cần bạn bắt đầu thật.
@@ -14,27 +18,31 @@ Nhưng lại đủ chân thành để dẫn dắt một người khác học ngh
 Tại đây, bạn không bị đánh giá bằng đơn hàng đầu tiên,
 Mà được ghi nhận bằng ánh sáng bạn dám thắp lên cho người khác.. 
 
-CẤP ĐỘ
-TÊN GỌI
-ĐỊNH NGHĨA NGẮN GỌN
-MT1
-Mentor 1 sao
-Khởi động, bắt đầu hành trình dẫn dắt
-MT2
-Mentor 2 sao
-Có đội nhóm cấp 1 hoạt động tích cực
-MT3
-Mentor 3 sao
-Bắt đầu có hệ thống mở rộng cấp 2-3
-MT4
-Mentor 4 sao
-Đã xây dựng được đội ngũ lãnh đạo cùng đồng hành
-MT5
-Mentor 5 sao
-Người dẫn đầu tinh hoa toàn hệ thống
 
+CẤP ĐỘ
+	TÊN GỌI
+	ĐỊNH NGHĨA NGẮN GỌN
+	MT1
+	Mentor 1 sao
+	Khởi động, bắt đầu hành trình dẫn dắt
+	MT2
+	Mentor 2 sao
+	Có đội nhóm cấp 1 hoạt động tích cực
+	MT3
+	Mentor 3 sao
+	Bắt đầu có hệ thống mở rộng cấp 2-3
+	MT4
+	Mentor 4 sao
+	Đã xây dựng được đội ngũ lãnh đạo cùng đồng hành
+	MT5
+	Mentor 5 sao
+	Người dẫn đầu tinh hoa toàn hệ thống
+	
 
 📌 Điều kiện kích hoạt: đơn hàng sau chiết khấu tối thiểu 3.000.000đ, bạn chính thức trở thành Mentor 1 sao (MT1) của hệ thống Laya.
+________________
+
+
 
 
 III.  CƠ CẤU HỆ THỐNG & CÁCH GỌI
@@ -43,6 +51,8 @@ Người bạn trực tiếp giới thiệu: M1
 Tuyến dưới của M1: M2
 Cứ thế đến M3 và M4
 → Tổng cộng 4 tầng tính từ bạn (M)
+________________
+
 
 IV. CHÍNH SÁCH CHIẾT KHẤU & THƯỞNG DẪN DẮT
 1. Chiết khấu đơn hàng cá nhân (M)
@@ -54,28 +64,34 @@ IV. CHÍNH SÁCH CHIẾT KHẤU & THƯỞNG DẪN DẮT
 + Mua đơn số lượng 100 sản phẩm trở lên tặng thưởng thêm 30% giá trị đơn hàng (% tặng thêm chuyển vào ví mua)
 Lưu ý: Phần tặng thêm ở ví mua không tính chiết khấu và không được cộng vào doanh số
 
+
 2. Thu nhập Action Coach và Action Cost
 Tuyến hệ thống
-M nhận Action Cost
-M coach M1
-15%
-M coach M2
-7%
-M coach M3
-5%
-M coach M4
-12%
-
+	M nhận Action Cost
+	M coach M1
+	15%
+	M coach M2
+	7%
+	M coach M3
+	5%
+	M coach M4
+	12%
+	
 
  Mỗi cấp độ mentor tương ứng với khóa đào tạo chuyên sâu để nâng tầm bạn trở thành chuyên gia tâm trí – người dẫn dắt hệ thống cân bằng hai thế giới .
+________________
+
+
+________________
 
 
 V.  CHUYỂN GIAO CÔNG NGHỆ “LÀM CHỦ TRỊ LIỆU-KIẾN TẠO THỊNH VƯỢNG CÙNG LAYA”
  
 GÓI
-KHOÁ HỌC
-QUYỀN LỢI ĐẶC BIỆT
-1
+	KHOÁ HỌC
+	QUYỀN LỢI ĐẶC BIỆT
+	1
+	
 
 39.000.000đ
 (Làm chủ trị liệu)
@@ -86,7 +102,7 @@ Kỹ năng lãnh đạo + DISC MT3 trị giá 8.000.000đ
 Đạo tạo AI MT 3 trị giá 9.000.000đ
 
 
-- Tặng Combo 1 máy trị liệu Biosync LayaCare Therapy + 1 máy soi da công nghệ mới trị giá 65.000.000đ
+	- Tặng Combo 1 máy trị liệu Biosync LayaCare Therapy + 1 máy soi da công nghệ mới trị giá 65.000.000đ
 -  Tặng bộ quần áo trị liệu Laya trị giá 1.000.000đ
 - Tặng 1 Kem trị liệu Herbal 247 Immune Cream Body 150g trị giá 1.350.000đ
 - Tặng 1 Kem Double Colagen 50g trị giá 900.000đ
@@ -94,8 +110,8 @@ Kỹ năng lãnh đạo + DISC MT3 trị giá 8.000.000đ
 -Cấp nhận chứng nhận đào tạo máy Biosync LayaCare Therapy
 
 
-2
-99.000.000đ
+	2
+	99.000.000đ
 (Kiến tạo thịnh vượng)
 Cân bằng 2 thế giới – SGK4 Trị giá 35.000.000đ
 Soi da bắt mệnh– SGK4 Trị giá 48.000.000đ
@@ -105,7 +121,7 @@ Kỹ năng lãnh đạo + DISC SGK4 trị giá 20.000.000đ
 Số học ứng dụng (Number Technology) cơ bản trị giá 5.000.000đ
 
 
-- Tặng Combo 2 máy trị liệu Biosync LayaCare Therapy + 2 máy soi da công nghệ mới trị giá 65.000.000đ/combo (130.000.000đ)
+	- Tặng Combo 2 máy trị liệu Biosync LayaCare Therapy + 2 máy soi da công nghệ mới trị giá 65.000.000đ/combo (130.000.000đ)
 - Tặng 2 bộ quần áo trị liệu Laya trị giá 2.000.000đ
 -Tặng 4 Kem trị liệu Herbal 247 Immune Cream Body 150g trị giá 1.350.000đ/hộp ( 5.400.000đ)
 - Tặng 4 Kem Double Colagen 50g trị giá 900.000đ/hộp (3.600.000đ)
@@ -123,21 +139,23 @@ Số học ứng dụng (Number Technology) cơ bản trị giá 5.000.000đ
 -Thưởng đồng kiến tạo 12% giá trị khoá học vào ví mua
 
 
-
+	
 
 VI.  CHÍNH SÁCH THƯỞNG CỐNG HIẾN CUỐI NĂM
 Thưởng cống hiến nhằm ghi nhận những đóng góp, phát triển trên hành trình dẫn dắt đào tạo action coach cho đội nhóm. Vinh danh nhận 1 lần vào cuối năm
 Doanh số Action Coach
-Tri ân cống hiến
- 2 tỷ đến Dưới 5 tỷ
-1%
-5 đến dưới 15 tỷ
-1,5%
-Trên 15 tỷ
-2%
-
+	Tri ân cống hiến
+	 2 tỷ đến Dưới 5 tỷ
+	1%
+	5 đến dưới 15 tỷ
+	1,5%
+	Trên 15 tỷ
+	2%
+	
 
  Điều kiện nhận tri ân cống hiến: Mua hàng tháng ≥ 3 triệu/10 tháng.
+________________
+
 
 VII.  CỔ ĐÔNG DANH DỰ: MENTOR BOSS TRỌN ĐỜI
 Dành cho 10 người đầu tiên hội đủ điều kiện sau:
@@ -147,55 +165,60 @@ Duy trì doanh số ≥30 tỷ/năm và đạt tri ân cống hiến 3 năm liê
 💎 Phần thưởng: Trở thành cổ đông danh dự, hưởng 1.8% lợi nhuận toàn hệ thống mỗi năm – TRỌN ĐỜI
 VIII. PHÚC LỢI MENTOR ( M1 sao-M5 sao)
 Mentor 1 sao (MT1)
-•	Được đào tạo các khóa học dành cho Mentor 1.
-•	Được phép triển khai hệ thống đào tạo.
-•	Hưởng thu nhập Action Coach.
-•	Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
-•	Được ứng tiền từ nền tảng theo chính sách Mentor 1.
+•        Được đào tạo các khóa học dành cho Mentor 1.
+•        Được phép triển khai hệ thống đào tạo.
+•        Hưởng thu nhập Action Coach.
+•        Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
+•        Được ứng tiền từ nền tảng theo chính sách Mentor 1.
+
 
 Mentor 2 sao (MT2)
-•	Được đào tạo các khóa học nâng cao dành cho Mentor 2.
-•	Được huấn luyện kỹ năng lãnh đạo nhóm.
-•	Được phép triển khai hệ thống đào tạo.
-•	Hưởng thu nhập Action Coach.
-•	Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
-•	Trợ cấp bảo hiểm 100.000đ/ngày nằm viện (tối đa 30 ngày/năm, gửi giấy tờ viện về bộ     phận tiếp nhận của công ty).
-•	Được ứng tiền từ nền tảng theo chính sách Mentor 2.
+•        Được đào tạo các khóa học nâng cao dành cho Mentor 2.
+•        Được huấn luyện kỹ năng lãnh đạo nhóm.
+•        Được phép triển khai hệ thống đào tạo.
+•        Hưởng thu nhập Action Coach.
+•        Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
+•        Trợ cấp bảo hiểm 100.000đ/ngày nằm viện (tối đa 30 ngày/năm, gửi giấy tờ viện về bộ     phận tiếp nhận của công ty).
+•        Được ứng tiền từ nền tảng theo chính sách Mentor 2.
+
 
 Mentor 3 sao (MT3)
-•	Được đào tạo các khóa học chuyên sâu dành cho Mentor 3.
-•	Được huấn luyện kỹ năng lãnh đạo hệ thống chuyên nghiệp.
-•	Được phép triển khai hệ thống đào tạo.
-•	Hưởng thu nhập Action Coach.
-•	Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
-•	Trợ cấp bảo hiểm 200.000đ/ngày nằm viện (tối đa 45 ngày/năm, gửi giấy tờ viện về bộ phận tiếp nhận của công ty).
-•	Được ứng tiền từ nền tảng theo chính sách Mentor 3.
+•        Được đào tạo các khóa học chuyên sâu dành cho Mentor 3.
+•        Được huấn luyện kỹ năng lãnh đạo hệ thống chuyên nghiệp.
+•        Được phép triển khai hệ thống đào tạo.
+•        Hưởng thu nhập Action Coach.
+•        Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
+•        Trợ cấp bảo hiểm 200.000đ/ngày nằm viện (tối đa 45 ngày/năm, gửi giấy tờ viện về bộ phận tiếp nhận của công ty).
+•        Được ứng tiền từ nền tảng theo chính sách Mentor 3.
+
 
 Mentor 4 sao (MT4)
-•	Được đào tạo các khóa học cấp chuyên gia dành cho Mentor 4.
-•	Được huấn luyện bài bản trở thành bậc thầy dẫn dắt.
-•	Được tham gia các cuộc họp chiến lược phát triển nền tảng.
-•	Được phép triển khai hệ thống đào tạo.
-•	Hưởng thu nhập Action Coach.
-•	Hưởng lương  tối đa 10 triệu đồng/tháng (tùy theo quy mô hệ thống).
-•	Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
-•	Trợ cấp bảo hiểm 300.000đ/ngày nằm viện (tối đa 60 ngày/năm, gửi giấy tờ viện về bộ      phận tiếp nhận của công ty).
-•	Hưởng kỳ nghỉ trong nước 1 lần/năm cố định.
-•	Được ứng tiền từ nền tảng theo chính sách Mentor 4.
+•        Được đào tạo các khóa học cấp chuyên gia dành cho Mentor 4.
+•        Được huấn luyện bài bản trở thành bậc thầy dẫn dắt.
+•        Được tham gia các cuộc họp chiến lược phát triển nền tảng.
+•        Được phép triển khai hệ thống đào tạo.
+•        Hưởng thu nhập Action Coach.
+•        Hưởng lương  tối đa 10 triệu đồng/tháng (tùy theo quy mô hệ thống).
+•        Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
+•        Trợ cấp bảo hiểm 300.000đ/ngày nằm viện (tối đa 60 ngày/năm, gửi giấy tờ viện về bộ      phận tiếp nhận của công ty).
+•        Hưởng kỳ nghỉ trong nước 1 lần/năm cố định.
+•        Được ứng tiền từ nền tảng theo chính sách Mentor 4.
+
 
 Mentor 5 sao (MT5)
-•	Được đào tạo các khóa học cấp sáng lập dành cho Mentor 5.
-•	Được huấn luyện bài bản trở thành bậc thầy khai sáng.
-•	Được tham gia các cuộc họp chiến lược phát triển nền tảng.
-•	Được tham gia hội đồng sáng lập điều hành nền tảng.
-•	Được phép triển khai hệ thống đào tạo các cấp.
-•	Hưởng thu nhập Action Coach.
-•	Hưởng lương tối đa 20 triệu đồng/tháng (tùy theo quy mô hệ thống).
-•	Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
-•	Trợ cấp bảo hiểm 500.000đ/ngày nằm viện (tối đa 90 ngày/năm, gửi giấy tờ viện về bộ phận tiếp nhận của công ty).
-•	Hưởng kỳ nghỉ trong nước 1 lần/năm cố định.
-•	Hưởng kỳ nghỉ nước ngoài 1 lần/năm cố định.
-•	Được ứng tiền từ nền tảng theo chính sách Mentor 5.
+•        Được đào tạo các khóa học cấp sáng lập dành cho Mentor 5.
+•        Được huấn luyện bài bản trở thành bậc thầy khai sáng.
+•        Được tham gia các cuộc họp chiến lược phát triển nền tảng.
+•        Được tham gia hội đồng sáng lập điều hành nền tảng.
+•        Được phép triển khai hệ thống đào tạo các cấp.
+•        Hưởng thu nhập Action Coach.
+•        Hưởng lương tối đa 20 triệu đồng/tháng (tùy theo quy mô hệ thống).
+•        Hưởng ưu đãi từ các chương trình khuyến mãi của hệ thống.
+•        Trợ cấp bảo hiểm 500.000đ/ngày nằm viện (tối đa 90 ngày/năm, gửi giấy tờ viện về bộ phận tiếp nhận của công ty).
+•        Hưởng kỳ nghỉ trong nước 1 lần/năm cố định.
+•        Hưởng kỳ nghỉ nước ngoài 1 lần/năm cố định.
+•        Được ứng tiền từ nền tảng theo chính sách Mentor 5.
+
 
 IX.  ĐIỀU KIỆN MENTOR
 ⭐️ MENTOR 1 SAO (MT1) – Khởi động hành trình
@@ -230,53 +253,50 @@ X.CHÍNH SÁCH TẠM KHÓA VÀ KHÓA TÀI KHOẢN MENTOR – HỆ THỐNG LAYA
 - Cân bằng giữa nhân văn và tính minh bạch – công bằng.
 II. Cơ chế trạng thái tài khoản
 Trạng thái
-Ký hiệu
-Điều kiện
-Ý nghĩa
-Tích xanh
-🟢
-Có hoạt động trong 30 ngày gần nhất
-Được hưởng toàn bộ quyền lợi và thưởng
-Tích xám
-⚪
-Không hoạt động trong 31–180 ngày
-Bị tạm khoá Action Cost, không được chia thưởng
-Tích đỏ
-🔴
-Không hoạt động > 180 ngày
-Tài khoản bị khóa, không giữ quyền lợi, phải đăng ký lại từ đầu
-
-III. Cảnh báo hệ thống theo thời gian
+	Ký hiệu
+	Điều kiện
+	Ý nghĩa
+	Tích xanh
+	🟢
+	Có hoạt động trong 30 ngày gần nhất
+	Được hưởng toàn bộ quyền lợi và thưởng
+	Tích xám
+	⚪
+	Không hoạt động trong 31–180 ngày
+	Bị tạm khoá Action Cost, không được chia thưởng
+	Tích đỏ
+	🔴
+	Không hoạt động > 180 ngày
+	Tài khoản bị khóa, không giữ quyền lợi, phải đăng ký lại từ đầu
+	III. Cảnh báo hệ thống theo thời gian
 Mốc thời gian
-Hành động hệ thống
-25 ngày không hoạt động
-Cảnh báo lần 1: Bạn sắp vào trạng thái Tích xám
-30 ngày không hoạt động
-Cảnh báo lần 2: Chuyển trạng thái sang Tích xám ⚪
-60 – 90 ngày
-Nhắc nhở tiếp tục: Bạn còn 2 tháng để phục hồi 100% quyền lợi
-180 ngày
-Chuyển sang Tích đỏ 🔴 và khoá tài khoản
-
-2. Xử lý tài chính khi quay lại hoạt động
+	Hành động hệ thống
+	25 ngày không hoạt động
+	Cảnh báo lần 1: Bạn sắp vào trạng thái Tích xám
+	30 ngày không hoạt động
+	Cảnh báo lần 2: Chuyển trạng thái sang Tích xám ⚪
+	60 – 90 ngày
+	Nhắc nhở tiếp tục: Bạn còn 2 tháng để phục hồi 100% quyền lợi
+	180 ngày
+	Chuyển sang Tích đỏ 🔴 và khoá tài khoản
+	2. Xử lý tài chính khi quay lại hoạt động
 Trạng thái
-Điều kiện phục hồi
-Tỷ lệ nhận Action Cost
-Phân bổ phần còn lại
-Tích xám (≤ 2 tháng)
-Quay lại đủ tiêu chuẩn trong 1 năm
-100%
-Nhận lại toàn bộ
-Tích xám (3 – 6 tháng)
-Hoạt động liên tục 3 tháng
-85%
-15% chuyển vào Quỹ phúc lợi toàn dân
-Tích đỏ (> 6 tháng)
-Không thể phục hồi, phải đăng ký lại
-0%
-100% chuyển về Quỹ phúc lợi toàn dân
-
-3. Quỹ phúc lợi toàn dân
+	Điều kiện phục hồi
+	Tỷ lệ nhận Action Cost
+	Phân bổ phần còn lại
+	Tích xám (≤ 2 tháng)
+	Quay lại đủ tiêu chuẩn trong 1 năm
+	100%
+	Nhận lại toàn bộ
+	Tích xám (3 – 6 tháng)
+	Hoạt động liên tục 3 tháng
+	85%
+	15% chuyển vào Quỹ phúc lợi toàn dân
+	Tích đỏ (> 6 tháng)
+	Không thể phục hồi, phải đăng ký lại
+	0%
+	100% chuyển về Quỹ phúc lợi toàn dân
+	3. Quỹ phúc lợi toàn dân
 - Tập hợp phần trăm thưởng thu hồi từ mentor off quá lâu.
 - Được công khai minh bạch mỗi tháng.
 - Dùng để thưởng cho mentor hoạt động liên tục, hỗ trợ học bổng, chương trình huấn luyện, sự kiện nội bộ.
@@ -297,6 +317,3 @@ Laya là nơi cân bằng hai thế giới – Tâm trí và Vật chất – kh
 Để bạn vừa có thể sống tròn giấc mơ tài chính, vừa sống thật với con người bên trong.
 Bước vào Laya là bước vào hành trình:
 Tìm lại chính mình – Thắp sáng ước mơ – Chinh phục thế giới!
-
-
-

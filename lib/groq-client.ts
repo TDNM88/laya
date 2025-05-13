@@ -2,15 +2,15 @@ import OpenAI from "openai"
 
 // Cấu hình mô hình và tham số
 export const MODEL_CONFIG = {
-  // Sử dụng mô hình Llama 4 Scout từ Groq
-  modelId: "meta-llama/llama-4-scout-17b-16e-instruct",
+  // Sử dụng mô hình Llama 4 Maverick từ Groq
+  modelId: "meta-llama/llama-4-maverick-17b-128e-instruct",
   // Fallback models nếu mô hình chính không khả dụng
   fallbackModels: [
     "llama3-70b-8192",
     "llama3-8b-8192"
   ],
   temperature: 0.7,
-  maxTokens: 1000,
+  maxTokens: 4000, // Tăng giới hạn token để cho phép trả lời dài hơn
   timeout: 55000, // 55 giây timeout
   retryAttempts: 3,  // Số lần thử lại khi gặp lỗi
   retryDelay: 1000,  // Thời gian chờ giữa các lần thử lại (ms)

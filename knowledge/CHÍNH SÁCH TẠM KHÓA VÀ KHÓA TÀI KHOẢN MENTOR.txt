@@ -1,0 +1,62 @@
+﻿CHÍNH SÁCH TẠM KHÓA VÀ KHÓA TÀI KHOẢN MENTOR
+I. Mục tiêu
+- Bảo vệ quyền lợi của các mentor hoạt động liên tục.
+- Ngăn chặn hiện tượng trục lợi từ việc tạm off rồi quay lại nhận quyền lợi không đồng hành.
+- Cân bằng giữa nhân văn và tính minh bạch – công bằng.
+II. Cơ chế trạng thái tài khoản
+Trạng thái
+	Ký hiệu
+	Điều kiện
+	Ý nghĩa
+	Tích xanh
+	🟢
+	Có hoạt động trong 30 ngày gần nhất
+	Được hưởng toàn bộ quyền lợi và thưởng
+	Tích xám
+	⚪
+	Không hoạt động trong 31–180 ngày
+	Bị tạm khoá Action Cost, không được chia thưởng
+	Tích đỏ
+	🔴
+	Không hoạt động > 180 ngày
+	Tài khoản bị khóa, không giữ quyền lợi, phải đăng ký lại từ đầu
+	III. Cảnh báo hệ thống theo thời gian
+Mốc thời gian
+	Hành động hệ thống
+	25 ngày không hoạt động
+	Cảnh báo lần 1: Bạn sắp vào trạng thái Tích xám
+	30 ngày không hoạt động
+	Cảnh báo lần 2: Chuyển trạng thái sang Tích xám ⚪
+	60 – 90 ngày
+	Nhắc nhở tiếp tục: Bạn còn 2 tháng để phục hồi 100% quyền lợi
+	180 ngày
+	Chuyển sang Tích đỏ 🔴 và khoá tài khoản
+	IV. Xử lý tài chính khi quay lại hoạt động
+Trạng thái
+	Điều kiện phục hồi
+	Tỷ lệ nhận Action Cost
+	Phân bổ phần còn lại
+	Tích xám (≤ 2 tháng)
+	Quay lại đủ tiêu chuẩn trong 1 năm
+	100%
+	Nhận lại toàn bộ
+	Tích xám (3 – 6 tháng)
+	Hoạt động liên tục 3 tháng
+	85%
+	15% chuyển vào Quỹ phúc lợi toàn dân
+	Tích đỏ (> 6 tháng)
+	Không thể phục hồi, phải đăng ký lại
+	0%
+	100% chuyển về Quỹ phúc lợi toàn dân
+	V. Quỹ phúc lợi toàn dân
+- Tập hợp phần trăm thưởng thu hồi từ mentor off quá lâu.
+- Được công khai minh bạch mỗi tháng.
+- Dùng để thưởng cho mentor hoạt động liên tục, hỗ trợ học bổng, chương trình huấn luyện, sự kiện nội bộ.
+VI. Nguyên tắc bảo lưu tầng
+Chính sách tạm khóa và khóa tài khoản mentor tại Laya được xây dựng dựa trên nguyên tắc công bằng – minh bạch – bảo vệ người hoạt động thực sự.
+  Chính sách có lộ trình rõ ràng (2 – 6 tháng) với điều kiện phục hồi minh bạch.
+  Không cắt trắng quyền lợi, vẫn cho phép quay lại và giữ lại một phần hành trình đã đóng góp.
+  Người off lâu không bị xoá sổ ngay mà vẫn có cơ hội hồi phục nếu đủ cam kết.
+  Người đang hoạt động không bị thiệt quyền lợi vì tầng trên off – tránh tình trạng bất công và đẩy tầng.
+  Quỹ phúc lợi toàn dân được công khai, quản lý minh bạch và phục vụ đúng mục tiêu cộng đồng.
+  Hệ thống trạng thái tích xanh – tích xám – tích đỏ giúp cả mentor và ban quản trị biết rõ vị trí, tránh cảm tính – tranh cãi.

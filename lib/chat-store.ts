@@ -1,6 +1,7 @@
 import { create } from "zustand"
-// Sử dụng cú pháp import mới cho zustand v5
-import { createJSONStorage, persist } from "zustand/middleware"
+// Sử dụng cú pháp import mới cho zustand
+import { createJSONStorage } from "zustand/middleware"
+import { persist } from "zustand/middleware"
 import { v4 as uuidv4 } from "uuid"
 import type { ChatState, Message, User } from "@/types/chat"
 import { fetchWithRetry } from "@/lib/utils"
@@ -37,25 +38,27 @@ const initialState: ChatState = {
   theme: "light",
 }
 
-export const useChatStore = create<
-  ChatState & {
-    sendMessage: (content: string, attachments?: File[] | any[]) => Promise<void>
-    editMessage: (messageId: string, newContent: string) => void
-    deleteMessage: (messageId: string) => void
-    markAsRead: (messageId: string) => void
-    addReaction: (messageId: string, emoji: string) => void
-    removeReaction: (messageId: string, emoji: string) => void
-    createSession: (participants: User[], isGroup?: boolean, groupName?: string) => string
-    setActiveSession: (sessionId: string) => void
-    clearError: () => void
-    clearSessionHistory: (sessionId: string) => void
-    clearAllHistory: () => void
-    renameSession: (sessionId: string, newName: string) => void
-    deleteSession: (sessionId: string) => void
-    setTheme: (theme: "light" | "dark" | "system") => void
-    addFeedback: (messageId: string, feedback: "positive" | "negative") => void
-  }
->(
+// Định nghĩa type cho store
+type ChatStore = ChatState & {
+  sendMessage: (content: string, attachments?: File[] | any[]) => Promise<void>
+  editMessage: (messageId: string, newContent: string) => void
+  deleteMessage: (messageId: string) => void
+  markAsRead: (messageId: string) => void
+  addReaction: (messageId: string, emoji: string) => void
+  removeReaction: (messageId: string, emoji: string) => void
+  createSession: (participants: User[], isGroup?: boolean, groupName?: string) => string
+  setActiveSession: (sessionId: string) => void
+  clearError: () => void
+  clearSessionHistory: (sessionId: string) => void
+  clearAllHistory: () => void
+  renameSession: (sessionId: string, newName: string) => void
+  deleteSession: (sessionId: string) => void
+  setTheme: (theme: "light" | "dark" | "system") => void
+  addFeedback: (messageId: string, feedback: "positive" | "negative") => void
+}
+
+// Sử dụng cú pháp mới của Zustand v5
+export const useChatStore = create<ChatStore>()(
   persist(
     (set, get) => ({
       ...initialState,

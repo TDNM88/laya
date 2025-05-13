@@ -1,7 +1,7 @@
 // Sử dụng Response API tiêu chuẩn của Next.js thay vì thư viện ai
 // vì có thể có sự không tương thích giữa phiên bản
 import { createClient, testGroqConnection, MODEL_CONFIG } from "@/lib/groq-client"
-import { searchDocuments, getKnowledgeBaseStats, reloadKnowledgeBase } from "@/lib/knowledge-fixed"
+import { searchDocuments } from "@/lib/knowledge"
 import { detectImageGenerationRequest, translatePromptToEnglish } from "@/lib/image-detection"
 import { v4 as uuidv4 } from "uuid"
 
@@ -51,44 +51,38 @@ export async function POST(req: Request) {
     
     // Phát hiện yêu cầu tạo ảnh
     const imageDetection = detectImageGenerationRequest(lastMessage)
-    let shouldGenerateImage = false
-    let translatedPrompt = null
-    let imageGenerationNotification = null
     let imageGenerationResponse = null
+    let imageGenerationNotification = null
+    let translatedPrompt = null
+    let shouldGenerateImage = false
     
+    // Nếu là yêu cầu tạo ảnh và có prompt hợp lệ
     if (imageDetection.isImageRequest && imageDetection.prompt) {
-      console.log("Image generation request detected:", imageDetection.prompt)
-      shouldGenerateImage = true
+      console.log("Detected image generation request with prompt:", imageDetection.prompt)
       
+      // Tạo thông báo trước khi tiến hành tạo ảnh
+      imageGenerationNotification = `Tôi đang tiến hành tạo ảnh từ mô tả của bạn: "${imageDetection.prompt}". Vui lòng đợi trong giây lát...`
+      
+      // Chỉ chuẩn bị dịch prompt nhưng chưa gọi API tạo ảnh
       try {
-        // Dịch prompt sang tiếng Anh để tạo ảnh chất lượng tốt hơn
-        translatedPrompt = await translatePromptToEnglish(imageDetection.prompt)
-        console.log("Translated prompt:", translatedPrompt)
-        
-        // Tạo thông báo để hiển thị trước khi tạo ảnh
-        imageGenerationNotification = `Tôi đang tiến hành tạo ảnh từ mô tả của bạn: "${imageDetection.prompt}". Vui lòng đợi trong giây lát...`
+        // Dịch prompt sang tiếng Anh để chuẩn bị cho việc tạo ảnh sau
+        translatedPrompt = await translatePromptToEnglish(imageDetection.prompt);
+        console.log(`Translated prompt: "${imageDetection.prompt}" -> "${translatedPrompt}"`);
+        shouldGenerateImage = true;
       } catch (error) {
-        console.error("Error translating prompt:", error)
-        // Nếu không dịch được, sử dụng prompt gốc
-        translatedPrompt = imageDetection.prompt
+        console.error("Error translating prompt:", error);
+        // Nếu có lỗi khi dịch, sử dụng prompt gốc
+        translatedPrompt = imageDetection.prompt;
+        shouldGenerateImage = true;
       }
     }
 
-    // Tải lại knowledge base trước khi xử lý mỗi yêu cầu
-    try {
-      // Tải lại knowledge base với force=true để đảm bảo có dữ liệu mới nhất
-      await reloadKnowledgeBase();
-      console.log("Knowledge base reloaded successfully");
-    } catch (error) {
-      console.error("Error reloading knowledge base:", error);
-    }
-
-    // Tìm kiếm tài liệu liên quan nếu không phải là yêu cầu tạo ảnh
+    // Tìm kiếm thông tin liên quan từ cơ sở kiến thức nếu không phải là yêu cầu tạo ảnh
     let relevantDocs: Array<{content: string; source: string; similarity: number}> = []
     if (!imageDetection.isImageRequest) {
       try {
         relevantDocs = await searchDocuments(lastMessage)
-        console.log(`Found ${relevantDocs.length} relevant documents for query: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`)
+        console.log(`Found ${relevantDocs.length} relevant documents`)
       } catch (error) {
         console.error("Error searching documents:", error)
         // Tiếp tục xử lý mà không có tài liệu liên quan
@@ -112,21 +106,16 @@ export async function POST(req: Request) {
       // Tạo context với định dạng rõ ràng hơn để ngăn va trộn thông tin
       context = "THÔNG TIN CHÍNH XÁC TỪ CƠ SỞ KIẾN THỨC (HÃY TRÍCH DẪN NGUYÊN VĂN VÀ KHÔNG THÊM BỚT THÔNG TIN):\n\n";
       
-      // Thêm từng tài liệu với phân cách rõ ràng và thông tin nguồn chi tiết hơn
+      // Thêm từng tài liệu với phân cách rõ ràng
       sortedDocs.forEach((doc, index) => {
-        // Giảm ngưỡng độ liên quan xuống 50% để có nhiều thông tin hơn
-        // nhưng ưu tiên hiển thị các tài liệu có độ liên quan cao hơn
-        if (doc.similarity >= 0.5) {
-          // Trích xuất tên file từ đường dẫn nguồn để hiển thị dễ đọc hơn
-          const sourceName = doc.source.split('/').pop() || doc.source;
-          
-          // Thêm phân cách rõ ràng giữa các tài liệu với độ tương đồng
-          context += `--- THÔNG TIN ${index + 1} (${Math.round(doc.similarity * 100)}% LIÊN QUAN) ---\n${doc.content}\n\n`;
+        // Chỉ sử dụng tài liệu có độ liên quan từ 60% trở lên để đảm bảo chất lượng
+        if (doc.similarity >= 0.6) {
+          context += `--- THÔNG TIN ${index + 1} ---\n${doc.content}\n\n`;
         }
       });
     }
 
-    // Tạo system prompt với context cải tiến
+    // Tạo system prompt với context
     const systemPrompt = `Bạn là trợ lý AI của Laya, một hệ sinh thái trị liệu kết hợp Đông y, công nghệ và tâm trí học.
     
     ${context ? context : "Không tìm thấy thông tin liên quan trong cơ sở kiến thức."}
@@ -134,17 +123,12 @@ export async function POST(req: Request) {
     HƯỚNG DẪN BẮT BUỘC:
     1. TRẢ LỜI ĐẦY ĐỦ VÀ CHI TIẾT NHẤT CÓ THỂ, sử dụng tối đa số lượng token cho phép (4000 token) để cung cấp thông tin đầy đủ và hữu ích.
     2. TRÍCH DẪN NGUYÊN VĂN các phần liên quan từ cơ sở kiến thức, đảm bảo tính chính xác tuyệt đối. KHÔNG ĐƯỢC thêm hoặc bớt thông tin.
-    3. KHI ĐƯỢC YÊU CẦU TRÍCH DẪN ĐOẠN DÀI, HÃY TRÍCH DẪN NGUYÊN VĂN TOÀN BỘ ĐOẠN ĐÓ mà không rút gọn, tóm tắt hay thay đổi nội dung.
-    4. TỔ CHỨC THÔNG TIN MỘT CÁCH RÕ RÀNG với các tiêu đề, đề mục và phân đoạn hợp lý để dễ đọc và hiểu.
-    5. KHÔNG ĐƯỢC trích dẫn nguồn trong câu trả lời. Hãy trả lời như thể thông tin đó là của bạn.
-    6. Nếu không có thông tin liên quan trong cơ sở kiến thức, hãy nói rằng bạn không có thông tin về vấn đề đó và đề nghị người dùng liên hệ với Mentor Laya để được hỗ trợ.
-    7. KHÔNG ĐƯỢC tạo ra các thông tin sai lệch hoặc không có trong cơ sở kiến thức.
-    8. Sử dụng CHÍNH XÁC các từ ngữ và cụm từ trong tài liệu, không tự ý thay đổi cách diễn đạt.
-    9. TRÁNH VA TRỘN thông tin giữa các nguồn khác nhau, giữ rõ ràng ranh giới giữa các nội dung.
-    10. LUÔN SỬ DỤNG TỐI ĐA SỐ LƯỢNG TOKEN (4000) để cung cấp thông tin chi tiết và đầy đủ nhất có thể.
-    11. Khi trả lời các câu hỏi về Đông y, hãy đảm bảo giải thích các khái niệm một cách dễ hiểu và đầy đủ.
-    12. Khi trả lời các câu hỏi về chính sách, hãy nêu rõ các quy định và điều kiện áp dụng.
-    13. Nếu được yêu cầu trích nguyên văn một đoạn, hãy sử dụng dấu ngoặc kép (") để đánh dấu đoạn trích dẫn và đảm bảo trích dẫn chính xác từ đầu đến cuối.
+    3. TỔ CHỨC THÔNG TIN MỘT CÁCH RÕ RÀNG với các tiêu đề, đề mục và phân đoạn hợp lý để dễ đọc và hiểu.
+    4. KHÔNG ĐƯỢC trích dẫn nguồn trong câu trả lời. Hãy trả lời như thể thông tin đó là của bạn.
+    5. Nếu không có thông tin liên quan trong cơ sở kiến thức, hãy nói rằng bạn không có thông tin về vấn đề đó và đề nghị người dùng liên hệ với Mentor Laya để được hỗ trợ.
+    6. KHÔNG ĐƯỢC tạo ra các thông tin sai lệch hoặc không có trong cơ sở kiến thức.
+    7. Sử dụng chính xác các từ ngữ và cụm từ trong tài liệu, không tự ý thay đổi cách diễn đạt.
+    8. TRÁNH VA TRỘN thông tin giữa các nguồn khác nhau, giữ rõ ràng ranh giới giữa các nội dung.
     
     Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp. Sử dụng emoji 🌿 khi nói về sản phẩm Laya và ✨ khi nói về hệ thống Mentor.`
 
@@ -292,15 +276,17 @@ export async function POST(req: Request) {
 `;
                     controller.enqueue(encoder.encode(errorChunk));
                   }
+                } catch (error) {
+                  console.error('Error processing stream:', error);
+                  controller.error(error);
                 }
               }
               
               // Xử lý phản hồi từ mô hình nếu không phải là yêu cầu tạo ảnh hoặc sau khi đã xử lý lỗi tạo ảnh
-              if (!shouldGenerateImage || (imageGenerationNotification && !translatedPrompt)) {
+              if (!shouldGenerateImage || !translatedPrompt) {
                 try {
                   let accumulatedText = "";
                   
-                  // Xử lý từng chunk từ stream để tối đa hóa số lượng token
                   for await (const chunk of response) {
                     if (chunk.choices && chunk.choices[0]?.delta?.content) {
                       const content = chunk.choices[0].delta.content;
@@ -311,8 +297,6 @@ export async function POST(req: Request) {
                       controller.enqueue(encoder.encode(dataChunk));
                     }
                   }
-                  
-                  console.log(`Total response length: ${accumulatedText.length} characters`);
                   
                   // Kết thúc stream
                   controller.enqueue(encoder.encode('data: [DONE]\n\n'));
@@ -374,60 +358,54 @@ export async function POST(req: Request) {
         }
         
         // Thiết lập timeout cho yêu cầu dự phòng
-        const abortController = new AbortController();
-        const timeoutId = setTimeout(() => {
-          abortController.abort();
-        }, 30000); // 30 giây timeout cho phương án dự phòng
-        
+        const fallbackController = new AbortController();
+        const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), 30000); // 30s timeout cho phương án dự phòng
+
+        // Tạo phản hồi không streaming
         const fallbackResponse = await groq.chat.completions.create({
           model: fallbackModelToUse,
           messages: [{ role: "system", content: systemPrompt }, ...messages],
           stream: false,
           temperature: MODEL_CONFIG.temperature,
-          max_tokens: MODEL_CONFIG.maxTokens,
-        }, { signal: abortController.signal });
+          max_tokens: MODEL_CONFIG.maxTokens / 2, // Giảm xuống để tránh timeout
+        }, { signal: fallbackController.signal })
         
-        clearTimeout(timeoutId);
-        
-        if (fallbackResponse.choices && fallbackResponse.choices.length > 0) {
-          const content = fallbackResponse.choices[0].message.content || "";
-          console.log("Fallback response received successfully");
-          
-          return new Response(
-            JSON.stringify({ 
-              text: content,
-              imageAttachment: imageGenerationResponse ? {
-                id: uuidv4(),
-                type: "image",
-                url: imageGenerationResponse.imageUrl || '',
-                name: `AI Image: ${(imageGenerationResponse.prompt || '').substring(0, 30)}${(imageGenerationResponse.prompt || '').length > 30 ? "..." : ""}`,
-                prompt: imageGenerationResponse.prompt || ''
-              } : null
-            }),
-            { 
-              status: 200, 
-              headers: { "Content-Type": "application/json" } 
-            }
-          );
-        } else {
-          throw new Error("No content in fallback response");
-        }
+        clearTimeout(fallbackTimeoutId);
+
+        const content = fallbackResponse.choices[0]?.message?.content || "Xin lỗi, tôi không thể trả lời ngay bây giờ."
+        console.log("Fallback response generated successfully")
+
+        return new Response(JSON.stringify({ text: content }), {
+          headers: { "Content-Type": "application/json" },
+        })
       } catch (fallbackError) {
-        console.error("Fallback response failed:", fallbackError);
-        
-        // Nếu cả phương án dự phòng cũng thất bại, trả về lỗi ban đầu
+        console.error("Fallback response also failed:", fallbackError)
+
+        // Nếu cả hai phương án đều thất bại, trả về thông báo lỗi
         return new Response(
-          JSON.stringify({ error: errorMessage }),
-          { status: statusCode, headers: { "Content-Type": "application/json" } }
-        );
+          JSON.stringify({
+            error: errorMessage,
+            details: error instanceof Error ? error.message : "Unknown error",
+          }),
+          {
+            status: statusCode,
+            headers: { "Content-Type": "application/json" },
+          },
+        )
       }
     }
   } catch (error) {
-    console.error("Unhandled error in API route:", error);
+    console.error("Unhandled error in chat API:", error)
     return new Response(
-      JSON.stringify({ error: "Đã xảy ra lỗi không xác định. Vui lòng thử lại sau." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+      JSON.stringify({
+        error: "Đã xảy ra lỗi không xác định khi xử lý yêu cầu",
+        details: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    )
   }
 }
 
@@ -437,66 +415,60 @@ export async function GET() {
     const connectionTest = await testGroqConnection()
 
     // Kiểm tra các tệp kiến thức
-    let knowledgeStatus = {
-      success: true,
-      message: "Cơ sở kiến thức hoạt động bình thường",
-      error: null as string | null
-    }
+    let knowledgeStatus = "unknown";
+    let knowledgeFiles: string[] = [];
+    let knowledgeError: string | null = null;
     
     try {
-      // Thử tìm kiếm với một truy vấn đơn giản để kiểm tra cơ sở kiến thức
-      await searchDocuments("test")
-    } catch (error) {
-      knowledgeStatus = {
-        success: false,
-        message: "Không thể truy cập cơ sở kiến thức",
-        error: error instanceof Error ? error.message : "Unknown error"
-      }
-    }
-    
-    // Kiểm tra API tạo ảnh
-    let imageApiStatus = {
-      success: true,
-      message: "API tạo ảnh hoạt động bình thường",
-      error: null as string | null
-    }
-    
-    try {
-      // Kiểm tra API key của TensorArt
-      const tensorArtApiKey = process.env.TENSORART_API_KEY
-      if (!tensorArtApiKey) {
-        throw new Error("TENSORART_API_KEY không được cấu hình")
-      }
+      // Import động để tránh lỗi circular dependency
+      const { loadKnowledgeBase } = await import("@/lib/knowledge");
+      await loadKnowledgeBase();
+      knowledgeStatus = "ok";
       
-      // Không thực sự gọi API tạo ảnh vì tốn tài nguyên, chỉ kiểm tra API key
-    } catch (error) {
-      imageApiStatus = {
-        success: false,
-        message: "Không thể kết nối đến API tạo ảnh",
-        error: error instanceof Error ? error.message : "Unknown error"
+      // Thử lấy danh sách tệp trong thư mục knowledge
+      // Sử dụng fs/promises thay vì require
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const knowledgeDir = path.join(process.cwd(), "knowledge");
+      
+      try {
+        const files = await fs.readdir(knowledgeDir);
+        knowledgeFiles = files;
+      } catch (fsError) {
+        console.error("Error reading knowledge directory:", fsError);
       }
+    } catch (knowledgeErr) {
+      knowledgeStatus = "error";
+      knowledgeError = knowledgeErr instanceof Error ? knowledgeErr.message : String(knowledgeErr);
     }
-    
+
     return new Response(
       JSON.stringify({
+        status: connectionTest.success ? "ok" : "error",
+        message: connectionTest.message,
+        model: connectionTest.modelTested || MODEL_CONFIG.modelId,
+        fallbackModels: MODEL_CONFIG.fallbackModels,
+        knowledge: {
+          status: knowledgeStatus,
+          files: knowledgeFiles,
+          error: knowledgeError
+        },
         timestamp: new Date().toISOString(),
-        groq: connectionTest,
-        knowledge: knowledgeStatus,
-        imageApi: imageApiStatus,
-        config: {
-          modelId: MODEL_CONFIG.modelId,
-          maxTokens: MODEL_CONFIG.maxTokens
-        }
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     )
   } catch (error) {
     return new Response(
       JSON.stringify({
-        error: "Không thể kiểm tra trạng thái API",
-        message: error instanceof Error ? error.message : "Unknown error"
+        status: "error",
+        message: "Không thể kiểm tra kết nối đến OpenRouter",
+        details: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
     )
   }
 }
