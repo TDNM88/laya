@@ -1,20 +1,23 @@
 import fs from "fs/promises"
 import path from "path"
 import { createEmbedding } from "./embeddings"
+import { v4 as uuidv4 } from 'uuid';
 
 // Path to the knowledge base files
 const KNOWLEDGE_DIR = path.join(process.cwd(), "knowledge")
 
 // Cấu trúc dữ liệu cải tiến cho knowledge cache
 interface KnowledgeChunk {
+  id: string;
   text: string;
+  fullContent: string;
   embedding: number[];
   source: string;
   category: string; // Thêm trường category để phân loại thông tin
   metadata: {
-    title: string;
-    section: string;
     importance: number; // Độ quan trọng của chunk (1-10)
+    timestamp: number;
+    keywords: string[];
   };
 }
 
@@ -58,6 +61,51 @@ function extractTitleFromContent(content: string): string {
 }
 
 // Load and process all knowledge files with enhanced processing
+/**
+ * Kiểm tra xem câu hỏi có liên quan đến giáo trình Soi Da Bắt Mệnh hay không
+ * @param query Câu hỏi của người dùng
+ * @returns true nếu câu hỏi liên quan đến Soi Da Bắt Mệnh
+ */
+function checkIfSoiDaQuery(query: string): boolean {
+  const normalizedQuery = query.toLowerCase();
+  
+  // Các từ khóa liên quan đến Soi Da Bắt Mệnh
+  const soiDaKeywords = [
+    "soi da", "bắt mệnh", "chẩn đoán", "tướng pháp", "tướng học", 
+    "tạng phủ", "ngũ tạng", "lục phủ", "kinh mạch", "huyệt đạo",
+    "cơ địa", "thể trạng", "bệnh cơ", "dấu hiệu", "triệu chứng", 
+    "chẩn đoán", "phương pháp", "kỹ thuật", "cao cấp", "laya"
+  ];
+  
+  // Kiểm tra xem câu hỏi có chứa các từ khóa liên quan không
+  for (const keyword of soiDaKeywords) {
+    if (normalizedQuery.includes(keyword)) {
+      return true;
+    }
+  }
+  
+  // Kiểm tra các cụm từ đặc trưng
+  const soiDaPhrases = [
+    "giáo trình soi da", "soi da bắt mệnh", "phương pháp soi da", 
+    "kỹ thuật soi da", "chẩn đoán qua da", "dấu hiệu trên da",
+    "tướng pháp đông y", "lý thuyết đông y"
+  ];
+  
+  for (const phrase of soiDaPhrases) {
+    if (normalizedQuery.includes(phrase)) {
+      return true;
+    }
+  }
+  
+  // Kiểm tra các câu hỏi trực tiếp về giáo trình
+  if (normalizedQuery.includes("giáo trình") && 
+      (normalizedQuery.includes("soi da") || normalizedQuery.includes("bắt mệnh") || normalizedQuery.includes("laya"))) {
+    return true;
+  }
+  
+  return false;
+}
+
 export async function loadKnowledgeBase(forceReload = false) {
   // Nếu đã tải và không yêu cầu tải lại, return ngay
   if (knowledgeCache.loaded && !forceReload) return;
@@ -77,78 +125,65 @@ export async function loadKnowledgeBase(forceReload = false) {
     }
 
     // Get the list of files that actually exist in the directory
-    let availableFiles: string[] = []
+    let files: string[] = []
     try {
-      availableFiles = await fs.readdir(KNOWLEDGE_DIR)
-      console.log(`Found ${availableFiles.length} files in knowledge directory:`, availableFiles)
+      files = await fs.readdir(KNOWLEDGE_DIR)
+      console.log(`Found ${files.length} files in knowledge directory:`, files)
     } catch (error) {
       console.error("Error reading knowledge directory:", error)
     }
 
     // If no files found, log a warning
-    if (availableFiles.length === 0) {
+    if (files.length === 0) {
       console.warn("No knowledge files found in directory. Knowledge base will be empty.")
     }
 
-    // Process each available file
-    for (const file of availableFiles) {
+    // Process each file in the knowledge directory
+    for (const file of files) {
       try {
         const filePath = path.join(KNOWLEDGE_DIR, file)
+        const content = await fs.readFile(filePath, "utf-8")
 
-        // Skip directories or non-text files
-        try {
-          const stats = await fs.stat(filePath)
-          if (stats.isDirectory()) {
-            console.log(`Skipping directory: ${file}`)
-            continue
-          }
-          
-          // Simple check for text files - could be improved
-          if (!file.endsWith('.txt') && !file.endsWith('.md')) {
-            console.log(`Skipping non-text file: ${file}`)
-            continue
-          }
-        } catch (error) {
-          console.error(`Error checking file ${file}:`, error)
-          continue
+        // Phân loại file
+        const category = categorizeFile(file)
+
+        // Xác định độ quan trọng dựa trên danh mục
+        let importance = 5 // Mức trung bình mặc định
+        if (category === "giao-trinh") {
+          importance = 9 // Giáo trình có độ quan trọng cao
+        } else if (category === "chinh-sach") {
+          importance = 8 // Chính sách cũng quan trọng
+        } else if (category === "qa") {
+          importance = 7
         }
 
-        // Read and process the file
-        const content = await fs.readFile(filePath, "utf-8")
-        
-        // Trích xuất tiêu đề từ nội dung
-        const title = extractTitleFromContent(content);
-        
-        // Phân loại file
-        const category = categorizeFile(file);
+        // Chia nội dung thành các chunk
+        const chunks = chunkContent(content, file)
 
-        // Split content into chunks with improved chunking
-        const chunks = splitIntoChunks(content, 500)
-
-        // Create embeddings for each chunk
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
+        // Tạo embedding cho từng chunk
+        for (const chunk of chunks) {
           try {
-            const embedding = await createEmbedding(chunk)
-            
-            // Tính toán độ quan trọng của chunk
-            // Chunks ở đầu file thường quan trọng hơn (tiêu đề, giới thiệu)
-            // Chunks có nhiều từ khóa quan trọng sẽ có trọng số cao hơn
-            const importance = calculateChunkImportance(chunk, i, chunks.length);
-            
+            // Tạo embedding cho chunk
+            const embedding = await createEmbedding(chunk.text)
+
+            // Trích xuất các từ khóa từ nội dung chunk
+            const keywords = extractKeywordsFromContent(chunk.text)
+
             knowledgeCache.chunks.push({
-              text: chunk, 
-              embedding, 
+              id: `${file}-${uuidv4()}`,
+              text: chunk.text,
+              fullContent: chunk.fullContent || chunk.text,
+              embedding,
               source: file,
               category,
               metadata: {
-                title,
-                section: extractSectionFromChunk(chunk),
-                importance
-              }
+                importance,
+                timestamp: Date.now(),
+                keywords,
+              },
             })
-          } catch (embeddingError) {
-            console.error(`Error creating embedding for chunk in ${file}:`, embeddingError)
+          } catch (chunkError) {
+            console.error(`Error processing chunk from file ${file}:`, chunkError)
           }
         }
 
@@ -168,92 +203,24 @@ export async function loadKnowledgeBase(forceReload = false) {
   }
 }
 
-// Tính toán độ quan trọng của chunk
-function calculateChunkImportance(chunk: string, index: number, totalChunks: number): number {
-  // Chunks ở đầu file thường quan trọng hơn (tiêu đề, giới thiệu)
-  const positionScore = Math.max(1, 10 - Math.floor((index / totalChunks) * 10));
-  
-  // Kiểm tra các từ khóa quan trọng
-  const importantKeywords = [
-    "chính sách", "quy định", "hướng dẫn", "bắt buộc", "quan trọng", 
-    "lưu ý", "cảnh báo", "yêu cầu", "tiêu chuẩn", "cấp độ", "mentor"
-  ];
-  
-  let keywordScore = 0;
-  const lowerChunk = chunk.toLowerCase();
-  
-  for (const keyword of importantKeywords) {
-    if (lowerChunk.includes(keyword)) {
-      keywordScore += 1;
-    }
-  }
-  
-  // Điều chỉnh keywordScore để không vượt quá 5
-  keywordScore = Math.min(5, keywordScore);
-  
-  // Tổng hợp điểm (tối đa là 10)
-  return Math.min(10, positionScore + keywordScore);
-}
+// Chia nội dung thành các chunk
+function chunkContent(content: string, filename: string): { text: string; fullContent: string }[] {
+  // Tách nội dung thành các đoạn văn
+  const paragraphs = content.split(/\n\s*\n/);
 
-// Trích xuất thông tin phần/mục từ chunk
-function extractSectionFromChunk(chunk: string): string {
-  // Tìm các pattern như "CHƯƠNG 1", "PHẦN I", "MỤC 1.2", etc.
-  const sectionPatterns = [
-    /CHƯƠNG\s+[\dIVXLC]+/i,
-    /PHẦN\s+[\dIVXLC]+/i,
-    /MỤC\s+[\d\.]+/i,
-    /[IVX]+\.\s+[A-ZĐÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ]/
-  ];
-  
-  for (const pattern of sectionPatterns) {
-    const match = chunk.match(pattern);
-    if (match) {
-      return match[0];
-    }
-  }
-  
-  return "Không xác định";
-}
+  const chunks: { text: string; fullContent: string }[] = [];
 
-// Split text into chunks with improved chunking strategy
-export function splitIntoChunks(text: string, maxChunkSize: number): string[] {
-  const chunks: string[] = [];
-  
-  // Kiểm tra nếu văn bản có dạng Q&A với các câu hỏi và câu trả lời
-  if (text.includes('→ Trả lời:') || text.includes('?')) {
-    // Tách văn bản theo các câu hỏi và câu trả lời
-    const qaPattern = /(\d+\.?\s*[^\n]+\?[\s\n]*→ Trả lời:[^\n]*(?:\n[^\d\n][^\n]*)*)\n?/g;
-    const matches = text.match(qaPattern);
-    
-    if (matches && matches.length > 0) {
-      console.log(`Found ${matches.length} Q&A pairs in text`);
-      return matches;
+  for (const paragraph of paragraphs) {
+    // Nếu đoạn văn quá dài, chia nhỏ hơn nữa
+    if (paragraph.length > 500) {
+      const subChunks = splitTextByParagraphs(paragraph, 500);
+      chunks.push(...subChunks.map(subChunk => ({ text: subChunk, fullContent: content })));
+    } else {
+      chunks.push({ text: paragraph, fullContent: content });
     }
   }
-  
-  // Tìm các đoạn văn bản có cấu trúc rõ ràng (tiêu đề, mục, chương)
-  const sectionPattern = /(?:^|\n)(?:CHƯƠNG|PHẦN|MỤC|[IVX]+\.)[\s\d\.]+[A-ZĐÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ][^\n]*(?:\n(?![A-ZĐÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ])[^\n]*)*/g;
-  const sections = text.match(sectionPattern);
-  
-  if (sections && sections.length > 0) {
-    // Nếu tìm thấy các phần có cấu trúc, sử dụng chúng làm các chunk
-    console.log(`Found ${sections.length} structured sections in text`);
-    
-    for (const section of sections) {
-      // Nếu phần quá dài, chia nhỏ hơn nữa
-      if (section.length > maxChunkSize * 2) {
-        const subChunks = splitTextByParagraphs(section, maxChunkSize);
-        chunks.push(...subChunks);
-      } else {
-        chunks.push(section);
-      }
-    }
-    
-    return chunks;
-  }
-  
-  // Nếu không tìm thấy cấu trúc rõ ràng, chia theo đoạn văn
-  return splitTextByParagraphs(text, maxChunkSize);
+
+  return chunks;
 }
 
 // Chia văn bản thành các đoạn
@@ -301,43 +268,19 @@ function splitTextByParagraphs(text: string, maxChunkSize: number): string[] {
   return chunks;
 }
 
-// Calculate cosine similarity between two vectors with improved precision
-function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0
-
-  let dotProduct = 0
-  let normA = 0
-  let normB = 0
-
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i]
-    normA += a[i] * a[i]
-    normB += b[i] * b[i]
-  }
-
-  const similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-  
-  // Xử lý các trường hợp đặc biệt (NaN, Infinity)
-  if (isNaN(similarity) || !isFinite(similarity)) {
-    return 0;
-  }
-  
-  return similarity;
-}
-
-// Hàm trích xuất từ khóa từ câu hỏi
-function extractKeywords(query: string): string[] {
+// Trích xuất từ khóa từ nội dung
+function extractKeywordsFromContent(content: string): string[] {
   // Danh sách các từ dừng (stop words) tiếng Việt
   const stopWords = [
     "và", "của", "là", "để", "trong", "có", "không", "với", "các", "lên", "về", "cho", "bị", "lúc", "ra", "tại", "vừa", "một", "như", "còn", "lại", 
     "vời", "các", "bị", "làm", "nên", "theo", "tạo", "thì", "hay", "trên", "vào", "bạn", "tôi", "anh", "chị", "em", "họ", "cô", "chú", "bác", "chúng", "ta", "mình", "cái", "này", "nào", "thế", "mà", "rằng", "thì", "làm", "sao", "vậy", "nên", "khi", "phải", "cần", "muốn", "gì", "còn"
   ];
   
-  // Chuẩn hóa câu hỏi
-  const normalizedQuery = query.toLowerCase().trim();
+  // Chuẩn hóa nội dung
+  const normalizedContent = content.toLowerCase().trim();
   
-  // Tách các từ trong câu hỏi
-  const words = normalizedQuery.split(/\s+/);
+  // Tách các từ trong nội dung
+  const words = normalizedContent.split(/\s+/);
   
   // Loại bỏ các từ dừng
   const filteredWords = words.filter(word => {
@@ -355,7 +298,7 @@ function extractKeywords(query: string): string[] {
 }
 
 // Tìm kiếm thông tin từ knowledge base với độ chính xác cao
-export async function searchDocuments(query: string): Promise<Array<{content: string; source: string; similarity: number}>> {
+export async function searchDocuments(query: string, extractFullContent: boolean = false): Promise<Array<{content: string; source: string; similarity: number; fullContent?: string}>> {
   await loadKnowledgeBase();
 
   // If no knowledge is loaded, return an empty array
@@ -363,98 +306,102 @@ export async function searchDocuments(query: string): Promise<Array<{content: st
     console.warn("No knowledge chunks available for search");
     return [];
   }
-
+  
+  // Kiểm tra xem câu hỏi có liên quan đến giáo trình Soi Da Bắt Mệnh hay không
+  const isSoiDaQuery = checkIfSoiDaQuery(query);
+  
   try {
-    // Chuẩn hóa câu hỏi để tăng khả năng tìm kiếm
-    const normalizedQuery = query.toLowerCase().trim();
+    // Tạo embedding cho câu hỏi
+    const queryEmbedding = await createEmbedding(query);
     
-    // Phân tích từ khóa quan trọng trong câu hỏi
-  const keywords = extractKeywords(normalizedQuery);
-  
-  // Tìm kiếm chính xác trước (exact match)
-  const exactMatches = knowledgeCache.chunks.filter(chunk => {
-    const normalizedText = chunk.text.toLowerCase();
-    return normalizedText.includes(normalizedQuery) || 
-           normalizedQuery.includes(normalizedText.substring(0, Math.min(normalizedText.length, 30)));
-  });
-  
-  if (exactMatches.length > 0) {
-    console.log(`Found ${exactMatches.length} exact matches for query: "${query}"`);
-    return exactMatches.map(chunk => ({
-      content: chunk.text,
-      source: chunk.source,
-      similarity: 1.0 // Đặt độ tương đồng cao nhất cho kết quả chính xác
-    }));
-  }
-  
-  // Tìm kiếm dựa trên từ khóa
-  if (keywords.length > 0) {
-    const keywordMatches = knowledgeCache.chunks.filter(chunk => {
-      const normalizedText = chunk.text.toLowerCase();
-      // Chunk phải chứa ít nhất 50% số từ khóa quan trọng
-      const matchedKeywords = keywords.filter(keyword => normalizedText.includes(keyword));
-      return matchedKeywords.length >= Math.ceil(keywords.length * 0.5);
-    });
-    
-    if (keywordMatches.length > 0) {
-      console.log(`Found ${keywordMatches.length} keyword matches for query: "${query}"`);
+    // Nếu câu hỏi liên quan đến Soi Da Bắt Mệnh, ưu tiên tìm kiếm trong giáo trình này
+    let searchChunks = knowledgeCache.chunks;
+    if (isSoiDaQuery) {
+      const soiDaChunks = knowledgeCache.chunks.filter(chunk => 
+        chunk.source.toLowerCase().includes("soi da") || 
+        chunk.source.toLowerCase().includes("bắt mệnh")
+      );
       
-      // Sắp xếp theo độ quan trọng của chunk và số lượng từ khóa khớp
-      return keywordMatches.map(chunk => {
-        const normalizedText = chunk.text.toLowerCase();
-        const matchedKeywords = keywords.filter(keyword => normalizedText.includes(keyword));
-        const keywordScore = matchedKeywords.length / keywords.length;
-        
-        // Kết hợp điểm từ khóa và độ quan trọng của chunk
-        const combinedScore = 0.7 * keywordScore + 0.3 * (chunk.metadata.importance / 10);
-        
+      if (soiDaChunks.length > 0) {
+        searchChunks = soiDaChunks;
+        console.log(`Found ${soiDaChunks.length} chunks related to Soi Da Bắt Mệnh, prioritizing these results.`);
+      }
+    }
+  
+    // Find the most relevant chunks
+    const relevantChunks = searchChunks
+      .map((chunk) => {
+        const similarity = cosineSimilarity(queryEmbedding, chunk.embedding) * (0.7 + 0.3 * chunk.metadata.importance / 10);
         return {
           content: chunk.text,
           source: chunk.source,
-          similarity: combinedScore
+          similarity,
+          fullContent: extractFullContent ? chunk.fullContent || chunk.text : undefined
         };
-      }).sort((a, b) => b.similarity - a.similarity);
+      })
+      // Lọc các kết quả có độ tương đồng thấp
+      .filter(chunk => chunk.similarity >= 0.3)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 7); // Tăng lên 7 kết quả để có thêm bối cảnh
+    
+    // Nếu không có kết quả nào đạt ngưỡng, trả về 5 kết quả tốt nhất
+    if (relevantChunks.length === 0) {
+      console.log("No chunks above threshold, returning top 5 results regardless of similarity");
+      return searchChunks
+        .map((chunk) => ({
+          content: chunk.text,
+          source: chunk.source,
+          similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
+          fullContent: extractFullContent ? chunk.fullContent || chunk.text : undefined
+        }))
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 5);
+    }
+    
+    return relevantChunks;
+  } catch (error) {
+    console.error("Error searching knowledge base:", error);
+    return []; // Return empty array in case of error
+  }
+}
+
+// Tính độ tương đồng cosine giữa hai vector với các cải tiến để tăng độ chính xác
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new Error(`Vector dimensions do not match: ${a.length} vs ${b.length}`);
+  }
+
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  let nonZeroElements = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    // Chỉ tính toán trên các phần tử khác 0 để giảm nhiễu
+    if (a[i] !== 0 || b[i] !== 0) {
+      dotProduct += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+      nonZeroElements++;
     }
   }
-  
-  // Nếu không có kết quả chính xác, sử dụng embedding
-  console.log("No exact or keyword matches found, using embeddings search");
-  const queryEmbedding = await createEmbedding(query)
 
-  // Giảm ngưỡng độ tương đồng tối thiểu để tăng khả năng tìm kiếm
-  const MIN_SIMILARITY_THRESHOLD = 0.3;
+  // Nếu không có phần tử nào khác 0, trả về 0
+  if (nonZeroElements === 0) {
+    return 0;
+  }
+
+  // Tính toán độ tương đồng cosine
+  const similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   
-  // Find the most relevant chunks
-  const relevantChunks = knowledgeCache.chunks
-    .map((chunk) => ({
-      content: chunk.text,
-      source: chunk.source,
-      // Kết hợp độ tương đồng vector và độ quan trọng của chunk
-      similarity: cosineSimilarity(queryEmbedding, chunk.embedding) * (0.7 + 0.3 * chunk.metadata.importance / 10),
-    }))
-    // Lọc các kết quả có độ tương đồng thấp
-    .filter(chunk => chunk.similarity >= MIN_SIMILARITY_THRESHOLD)
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, 7) // Tăng lên 7 kết quả để có nhiều thông tin hơn
-  
-  console.log(`Found ${relevantChunks.length} relevant chunks for query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
-  
-  // Nếu vẫn không tìm thấy kết quả, trả về top 5 kết quả gần nhất bất kể độ tương đồng
-  if (relevantChunks.length === 0) {
-    console.log("No chunks above threshold, returning top 5 results regardless of similarity");
-    return knowledgeCache.chunks
-      .map((chunk) => ({
-        content: chunk.text,
-        source: chunk.source,
-        similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
-      }))
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 5);
+  // Xử lý các trường hợp đặc biệt (NaN, Infinity)
+  if (isNaN(similarity) || !isFinite(similarity)) {
+    return 0;
   }
   
-  return relevantChunks;
-} catch (error) {
-  console.error("Error searching knowledge base:", error);
-  return []; // Return empty array in case of error
-}
+  // Áp dụng hàm sigmoid để tăng độ tương phản giữa các kết quả
+  // Giúp phân biệt rõ ràng hơn giữa các kết quả tốt và kém
+  const enhancedSimilarity = 1 / (1 + Math.exp(-10 * (similarity - 0.5)));
+  
+  return enhancedSimilarity;
 }
